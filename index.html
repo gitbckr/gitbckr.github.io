@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gitbacker — Self-hosted git backup tool</title>
+  <meta name="description" content="Back up your Git repositories automatically. Scheduled backups, GPG encryption, one-click restore, Slack alerts. Self-hosted with a single command.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Gitbacker — Self-hosted git backup tool">
+  <meta property="og:description" content="Back up your Git repositories automatically. Scheduled backups, GPG encryption, one-click restore. Self-hosted with a single command.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://gitbacker.com">
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg-subtle: #111113;
+      --bg-card: #18181b;
+      --fg: #fafafa;
+      --fg-muted: #a1a1aa;
+      --fg-dim: #71717a;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --border: #27272a;
+      --border-subtle: #1e1e21;
+      --radius: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* --- Layout --- */
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    section {
+      padding: 5rem 0;
+    }
+
+    /* --- Nav --- */
+
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      background: rgba(9, 9, 11, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .logo {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--fg);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.75rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--fg-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--fg); }
+
+    .nav-links .btn-sm {
+      background: var(--fg);
+      color: var(--bg);
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      transition: opacity 0.15s;
+    }
+
+    .nav-links .btn-sm:hover { opacity: 0.9; color: var(--bg); }
+
+    /* --- Hero --- */
+
+    .hero {
+      padding: 10rem 0 5rem;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.35rem 1rem;
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      margin-bottom: 2rem;
+    }
+
+    .hero-badge .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 .highlight {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--fg-muted);
+      max-width: 540px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+
+    /* --- Install Box --- */
+
+    .install-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    .install-box code {
+      font-family: var(--mono);
+      font-size: 0.875rem;
+      color: var(--fg);
+    }
+
+    .install-box .dollar {
+      color: var(--accent);
+      user-select: none;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg-dim);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover { color: var(--fg); border-color: var(--fg-dim); }
+
+    .hero-note {
+      font-size: 0.8rem;
+      color: var(--fg-dim);
+    }
+
+    .hero-note a {
+      color: var(--fg-muted);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* --- Features Grid --- */
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    h2 {
+      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+
+    .section-sub {
+      color: var(--fg-muted);
+      font-size: 1.05rem;
+      max-width: 560px;
+      margin-bottom: 3rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover { border-color: var(--fg-dim); }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--fg-muted);
+      line-height: 1.55;
+    }
+
+    /* --- How it Works --- */
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+
+    .step {
+      text-align: center;
+    }
+
+    .step-number {
+      width: 44px;
+      height: 44px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 1.25rem;
+    }
+
+    .step h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .step p {
+      font-size: 0.875rem;
+      color: var(--fg-muted);
+      line-height: 1.6;
+    }
+
+    /* --- Architecture --- */
+
+    .arch-diagram {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    .arch-diagram .hl { color: var(--accent); }
+    .arch-diagram .gr { color: var(--green); }
+    .arch-diagram .am { color: var(--amber); }
+
+    /* --- Tech Stack --- */
+
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+
+    .stack-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stack-item .name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .stack-item .desc {
+      font-size: 0.75rem;
+      color: var(--fg-dim);
+    }
+
+    /* --- CTA --- */
+
+    .cta {
+      text-align: center;
+      padding: 6rem 0;
+    }
+
+    .cta h2 { margin-bottom: 1rem; }
+
+    .cta p {
+      color: var(--fg-muted);
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--fg);
+      color: var(--bg);
+      padding: 0.75rem 1.75rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn:hover { opacity: 0.9; }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover { border-color: var(--fg-dim); }
+
+    .cta-buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* --- Footer --- */
+
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 2rem 0;
+    }
+
+    footer .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer .copy {
+      font-size: 0.8rem;
+      color: var(--fg-dim);
+    }
+
+    footer .links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    footer .links a {
+      color: var(--fg-dim);
+      text-decoration: none;
+      font-size: 0.8rem;
+      transition: color 0.15s;
+    }
+
+    footer .links a:hover { color: var(--fg-muted); }
+
+    /* --- Responsive --- */
+
+    @media (max-width: 768px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; gap: 2.5rem; }
+      .stack-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero { padding: 8rem 0 3rem; }
+      section { padding: 3.5rem 0; }
+      footer .container { flex-direction: column; gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="container">
+    <a href="/" class="logo">Gitbacker</a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="https://github.com/gitbckr/gitbacker" class="btn-sm">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge"><span class="dot"></span> Open source &middot; Self-hosted &middot; MIT License</div>
+    <h1>Never lose a<br><span class="highlight">git repository</span> again</h1>
+    <p class="hero-sub">Automated backups for your GitHub, GitLab, and Bitbucket repos. Encrypted archives, scheduled runs, one-click restore. Deploy in 30 seconds.</p>
+
+    <div class="install-box">
+      <code><span class="dollar">$</span> curl -fsSL https://gitbacker.com/install.sh | bash</code>
+      <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -fsSL https://gitbacker.com/install.sh | bash');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
+    </div>
+    <div class="hero-note">Requires Docker. <a href="https://github.com/gitbckr/gitbacker#readme">Read the docs</a></div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2>Everything you need to sleep at night</h2>
+    <p class="section-sub">Built for paranoid CEOs and pragmatic DevOps engineers alike.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#128197;</div>
+        <h3>Scheduled Backups</h3>
+        <p>Set it and forget it. Cron-based scheduling with global defaults. Every repo, every night, no manual intervention.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128274;</div>
+        <h3>GPG Encryption</h3>
+        <p>AES-256 symmetric encryption for every archive. Keys managed in the UI. Unencrypted data never touches your destination disk.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128260;</div>
+        <h3>One-Click Restore</h3>
+        <p>Pick a snapshot, confirm the target, watch it go. Force-mirror push restores all branches and tags to any git remote.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128275;</div>
+        <h3>Private Repo Support</h3>
+        <p>Store PATs or SSH keys per host. Credentials are matched automatically by hostname. Supports GitHub, GitLab, Bitbucket, and self-hosted.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128276;</div>
+        <h3>Slack Notifications</h3>
+        <p>Get alerted on backup failures, restore failures, verification errors, and low disk space. Extensible to any webhook provider.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128101;</div>
+        <h3>Multi-User RBAC</h3>
+        <p>Admin and operator roles with per-repo permissions. Operators see only their repos. Admins manage everything.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#127968;</div>
+        <h3>Fully Self-Hosted</h3>
+        <p>Your data stays on your infrastructure. One docker compose up and you're running. No cloud dependency, no SaaS lock-in.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128202;</div>
+        <h3>Dashboard</h3>
+        <p>Health overview at a glance. Failed jobs, next scheduled run, total repos, storage usage. The "is everything green?" screen.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9881;&#65039;</div>
+        <h3>Simple Configuration</h3>
+        <p>Paste a URL, submit. Destination, schedule, and encryption are pre-filled from global defaults and stay out of the way.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it Works -->
+<section id="how-it-works" style="background: var(--bg-subtle);">
+  <div class="container">
+    <div class="section-label" style="text-align:center;">How it works</div>
+    <h2 style="text-align:center;">Three steps to peace of mind</h2>
+    <p class="section-sub" style="text-align:center; margin: 0 auto 3.5rem;">No agents to install. No SSH access to your repos needed. Just URLs.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Install</h3>
+        <p>Run the one-liner. Docker pulls the images, generates secrets, seeds your admin account, and starts everything.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Add Repos</h3>
+        <p>Paste one or more git URLs. Pick a destination and schedule, or use the defaults. Private repos? Add a PAT in settings.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Relax</h3>
+        <p>Backups run on schedule. Failures trigger Slack alerts. Restore any snapshot with two clicks if disaster strikes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label">Architecture</div>
+    <h2>Built to be simple, built to scale</h2>
+    <p class="section-sub">Four services, fully decoupled. Scale any of them independently. Restart one without touching the others.</p>
+
+    <div class="arch-diagram">
+<span class="hl">Browser</span>
+   |
+   v
+<span class="gr">[Frontend]</span> ---/api/---> <span class="gr">[API]</span> ---Celery---> <span class="gr">[Worker]</span>
+ Next.js              FastAPI               Celery
+ :3000                :8000
+                        |                      |
+                        +----------+-----------+
+                                   v
+                           <span class="am">[PostgreSQL]</span>   <span class="am">[Redis]</span></div>
+  </div>
+</section>
+
+<!-- Tech Stack -->
+<section style="background: var(--bg-subtle);">
+  <div class="container">
+    <div class="section-label" style="text-align:center;">Tech Stack</div>
+    <h2 style="text-align:center;">Modern. Boring. Reliable.</h2>
+    <p class="section-sub" style="text-align:center; margin: 0 auto 3rem;">No exotic dependencies. Everything is battle-tested.</p>
+
+    <div class="stack-grid">
+      <div class="stack-item">
+        <div class="name">Next.js</div>
+        <div class="desc">Frontend</div>
+      </div>
+      <div class="stack-item">
+        <div class="name">FastAPI</div>
+        <div class="desc">API</div>
+      </div>
+      <div class="stack-item">
+        <div class="name">Celery</div>
+        <div class="desc">Task queue</div>
+      </div>
+      <div class="stack-item">
+        <div class="name">PostgreSQL</div>
+        <div class="desc">Database</div>
+      </div>
+      <div class="stack-item">
+        <div class="name">Redis</div>
+        <div class="desc">Broker</div>
+      </div>
+      <div class="stack-item">
+        <div class="name">Docker</div>
+        <div class="desc">Deployment</div>
+      </div>
+      <div class="stack-item">
+        <div class="name">shadcn/ui</div>
+        <div class="desc">Components</div>
+      </div>
+      <div class="stack-item">
+        <div class="name">GPG</div>
+        <div class="desc">Encryption</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <h2>Start backing up in 30 seconds</h2>
+    <p>One command. No sign-up. Your infrastructure, your data.</p>
+    <div class="cta-buttons">
+      <a href="https://github.com/gitbckr/gitbacker" class="btn">View on GitHub</a>
+      <a href="https://github.com/gitbckr/gitbacker#readme" class="btn btn-outline">Documentation</a>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <span class="copy">Gitbacker &mdash; Open source, MIT License</span>
+    <div class="links">
+      <a href="https://github.com/gitbckr/gitbacker">GitHub</a>
+      <a href="https://github.com/gitbckr/gitbacker/releases">Releases</a>
+      <a href="https://github.com/gitbckr/gitbacker/issues">Issues</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
