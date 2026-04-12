@@ -480,7 +480,7 @@
 
     <div class="install-box">
       <code><span class="dollar">$</span> curl -fsSL https://gitbacker.com/install.sh | bash</code>
-      <button class="copy-btn" onclick="navigator.clipboard.writeText('curl -fsSL https://gitbacker.com/install.sh | bash');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
+      <button class="copy-btn" onclick="copyInstall(this)">Copy</button>
     </div>
     <div class="hero-note">Requires Docker. <a href="https://github.com/gitbckr/gitbacker#readme">Read the docs</a></div>
   </div>
@@ -659,5 +659,27 @@
   </div>
 </footer>
 
+<script>
+function copyInstall(btn) {
+  var text = 'curl -fsSL https://gitbacker.com/install.sh | bash';
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(function () { copied(btn); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    copied(btn);
+  }
+}
+function copied(btn) {
+  btn.textContent = 'Copied!';
+  setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+}
+</script>
 </body>
 </html>
