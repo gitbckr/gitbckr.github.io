@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://gitbacker.com">
 
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>">
+  <link rel="icon" href="assets/gitbacker-logo-filled.svg" type="image/svg+xml">
 
   <style>
     :root {
@@ -33,6 +33,19 @@
       --radius: 12px;
       --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
       --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #ffffff;
+        --bg-subtle: #f4f4f5;
+        --bg-card: #fafafa;
+        --fg: #09090b;
+        --fg-muted: #52525b;
+        --fg-dim: #a1a1aa;
+        --border: #e4e4e7;
+        --border-subtle: #f0f0f2;
+      }
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -72,6 +85,10 @@
       border-bottom: 1px solid var(--border-subtle);
     }
 
+    @media (prefers-color-scheme: light) {
+      nav { background: rgba(255, 255, 255, 0.85); }
+    }
+
     nav .container {
       display: flex;
       align-items: center;
@@ -80,12 +97,17 @@
     }
 
     .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
       font-size: 1.1rem;
       font-weight: 700;
       color: var(--fg);
       text-decoration: none;
       letter-spacing: -0.02em;
     }
+
+    .logo img { display: block; }
 
     .nav-links {
       display: flex;
@@ -104,8 +126,8 @@
     .nav-links a:hover { color: var(--fg); }
 
     .nav-links .btn-sm {
-      background: var(--fg);
-      color: var(--bg);
+      background: var(--accent);
+      color: #fff;
       padding: 0.4rem 1rem;
       border-radius: 8px;
       font-weight: 600;
@@ -113,7 +135,7 @@
       transition: opacity 0.15s;
     }
 
-    .nav-links .btn-sm:hover { opacity: 0.9; color: var(--bg); }
+    .nav-links .btn-sm:hover { opacity: 0.9; color: #fff; }
 
     /* --- Hero --- */
 
@@ -242,7 +264,7 @@
 
     .features-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 1rem;
     }
 
@@ -338,8 +360,8 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      background: var(--fg);
-      color: var(--bg);
+      background: var(--accent);
+      color: #fff;
       padding: 0.75rem 1.75rem;
       border-radius: 10px;
       font-weight: 600;
@@ -397,7 +419,26 @@
 
     footer .links a:hover { color: var(--fg-muted); }
 
+    /* --- Logo states --- */
+
+    .logo-stale img,
+    .logo-stale picture img {
+      filter: grayscale(100%);
+      opacity: 0.4;
+      transition: filter 0.2s, opacity 0.2s;
+    }
+
+    .logo-stale:hover img,
+    .logo-stale:hover picture img {
+      filter: grayscale(0%);
+      opacity: 1;
+    }
+
     /* --- Responsive --- */
+
+    @media (max-width: 1024px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
 
     @media (max-width: 768px) {
       .features-grid { grid-template-columns: 1fr; }
@@ -414,7 +455,13 @@
 <!-- Nav -->
 <nav>
   <div class="container">
-    <a href="/" class="logo">Gitbacker</a>
+    <a href="/" class="logo">
+      <picture>
+        <source srcset="assets/gitbacker-logo-dark.svg" media="(prefers-color-scheme: dark)">
+        <img src="assets/gitbacker-logo-light.svg" alt="" height="28">
+      </picture>
+      Gitbacker
+    </a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
       <li><a href="#how-it-works">How it works</a></li>
@@ -459,8 +506,8 @@
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#128260;</div>
-        <h3>One-Click Restore</h3>
-        <p>Pick a snapshot, confirm the target, watch it go. Force-mirror push restores all branches and tags to any git remote.</p>
+        <h3>Restore with Diff Preview</h3>
+        <p>See exactly what will change before restoring. Compare branches and tags, view file-level diffs, then confirm. No blind force-pushes.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#128275;</div>
@@ -484,13 +531,28 @@
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#128202;</div>
-        <h3>Dashboard</h3>
-        <p>Health overview at a glance. Failed jobs, next scheduled run, total repos, storage usage. The "is everything green?" screen.</p>
+        <h3>Activity Dashboard</h3>
+        <p>GitHub-style heatmap of backup activity, storage breakdown per destination, repo health at a glance. The "is everything green?" screen.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128229;</div>
+        <h3>Snapshot Downloads</h3>
+        <p>Download any backup archive directly from the UI. Encrypted or decrypted on the fly. Export your data whenever you need it.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9889;</div>
+        <h3>Smart Deduplication</h3>
+        <p>Skips backup automatically when nothing changed since the last run. Saves disk space and time without any configuration.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">&#9881;&#65039;</div>
-        <h3>Simple Configuration</h3>
-        <p>Paste a URL, submit. Destination, schedule, and encryption are pre-filled from global defaults and stay out of the way.</p>
+        <h3>Batch Operations</h3>
+        <p>Select multiple repos and back up or delete them all at once. Sorting, filtering, and search across hundreds of repositories.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128272;</div>
+        <h3>Secrets at Rest</h3>
+        <p>Git credentials and encryption keys are encrypted in the database with Fernet (AES-128). Not stored in plaintext, ever.</p>
       </div>
     </div>
   </div>
@@ -517,7 +579,7 @@
       <div class="step">
         <div class="step-number">3</div>
         <h3>Relax</h3>
-        <p>Backups run on schedule. Failures trigger Slack alerts. Restore any snapshot with two clicks if disaster strikes.</p>
+        <p>Backups run on schedule. Unchanged repos are skipped automatically. Failures trigger Slack alerts. Restore any snapshot with a full diff preview before pushing.</p>
       </div>
     </div>
   </div>
