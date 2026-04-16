@@ -35,8 +35,19 @@
       --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
     }
 
+    :root.light {
+      --bg: #ffffff;
+      --bg-subtle: #f4f4f5;
+      --bg-card: #fafafa;
+      --fg: #09090b;
+      --fg-muted: #52525b;
+      --fg-dim: #a1a1aa;
+      --border: #e4e4e7;
+      --border-subtle: #f0f0f2;
+    }
+
     @media (prefers-color-scheme: light) {
-      :root {
+      :root:not(.dark) {
         --bg: #ffffff;
         --bg-subtle: #f4f4f5;
         --bg-card: #fafafa;
@@ -85,8 +96,9 @@
       border-bottom: 1px solid var(--border-subtle);
     }
 
+    .light nav { background: rgba(255, 255, 255, 0.85); }
     @media (prefers-color-scheme: light) {
-      nav { background: rgba(255, 255, 255, 0.85); }
+      :root:not(.dark) nav { background: rgba(255, 255, 255, 0.85); }
     }
 
     nav .container {
@@ -419,6 +431,44 @@
 
     footer .links a:hover { color: var(--fg-muted); }
 
+    /* --- Theme toggle --- */
+
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--fg-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .theme-toggle:hover { color: var(--fg); border-color: var(--fg-dim); }
+
+    .theme-toggle .icon-sun { display: none; }
+    .theme-toggle .icon-moon { display: block; }
+    .light .theme-toggle .icon-sun { display: block; }
+    .light .theme-toggle .icon-moon { display: none; }
+    @media (prefers-color-scheme: light) {
+      :root:not(.dark) .theme-toggle .icon-sun { display: block; }
+      :root:not(.dark) .theme-toggle .icon-moon { display: none; }
+    }
+
+    /* --- Logo theme switching --- */
+
+    .logo .logo-light { display: none; }
+    .logo .logo-dark { display: block; }
+    .light .logo .logo-light { display: block; }
+    .light .logo .logo-dark { display: none; }
+    @media (prefers-color-scheme: light) {
+      :root:not(.dark) .logo .logo-light { display: block; }
+      :root:not(.dark) .logo .logo-dark { display: none; }
+    }
+
     /* --- Logo states --- */
 
     .logo-stale img,
@@ -456,16 +506,17 @@
 <nav>
   <div class="container">
     <a href="/" class="logo">
-      <picture>
-        <source srcset="assets/gitbacker-logo-dark.svg" media="(prefers-color-scheme: dark)">
-        <img src="assets/gitbacker-logo-light.svg" alt="" height="28">
-      </picture>
+      <img src="assets/gitbacker-logo-dark.svg" alt="" height="28" class="logo-dark">
+      <img src="assets/gitbacker-logo-light.svg" alt="" height="28" class="logo-light">
       Gitbacker
     </a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
       <li><a href="#how-it-works">How it works</a></li>
-
+      <li><button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button></li>
       <li><a href="https://github.com/gitbckr/gitbacker" class="btn-sm">GitHub</a></li>
     </ul>
   </div>
@@ -629,6 +680,29 @@ function copyInstall(btn) {
 function copied(btn) {
   btn.textContent = 'Copied!';
   setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+}
+
+// Theme toggle — persists to localStorage, respects system preference
+(function() {
+  var saved = localStorage.getItem('theme');
+  if (saved === 'light') document.documentElement.classList.add('light');
+  else if (saved === 'dark') document.documentElement.classList.add('dark');
+})();
+
+function toggleTheme() {
+  var root = document.documentElement;
+  var isLight = root.classList.contains('light') ||
+    (!root.classList.contains('dark') && window.matchMedia('(prefers-color-scheme: light)').matches);
+
+  if (isLight) {
+    root.classList.remove('light');
+    root.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    root.classList.remove('dark');
+    root.classList.add('light');
+    localStorage.setItem('theme', 'light');
+  }
 }
 </script>
 </body>
