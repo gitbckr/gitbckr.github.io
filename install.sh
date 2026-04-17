@@ -9,7 +9,7 @@
 #
 # What this does:
 #   1. Checks for Docker and Docker Compose
-#   2. Creates ~/gitbacker with docker-compose.yml and .env
+#   2. Prompts for install directory (default: ./gitbacker in current folder)
 #   3. Generates a random JWT secret
 #   4. Pulls images and starts all services
 #   5. Seeds the admin account
@@ -19,7 +19,6 @@ set -euo pipefail
 
 main() {
   REPO="https://raw.githubusercontent.com/gitbckr/gitbacker/main"
-  INSTALL_DIR="${GITBACKER_DIR:-$HOME/gitbacker}"
   VERSION="${GITBACKER_VERSION:-latest}"
 
   # --- Helpers ---
@@ -28,6 +27,50 @@ main() {
   ok()    { printf "\033[1;32m==>\033[0m %s\n" "$*"; }
   warn()  { printf "\033[1;33m==>\033[0m %s\n" "$*"; }
   fail()  { printf "\033[1;31m==>\033[0m %s\n" "$*" >&2; exit 1; }
+
+  prompt() {
+    # Read from /dev/tty so prompts work even under `curl | bash`.
+    local prompt_text="$1" default="${2:-}" reply
+    if [ -r /dev/tty ]; then
+      printf "%s " "$prompt_text" > /dev/tty
+      read -r reply < /dev/tty || reply=""
+      printf "%s" "${reply:-$default}"
+    else
+      printf "%s" "$default"
+    fi
+  }
+
+  choose_install_dir() {
+    # Priority:
+    #   1. GITBACKER_DIR env var (scripted/CI use — no prompt)
+    #   2. Interactive: default to $PWD/gitbacker, let user confirm or override
+    #   3. Non-interactive fallback: $PWD/gitbacker
+    if [ -n "${GITBACKER_DIR:-}" ]; then
+      printf "%s" "$GITBACKER_DIR"
+      return
+    fi
+
+    local default="$PWD/gitbacker"
+    if [ ! -r /dev/tty ]; then
+      printf "%s" "$default"
+      return
+    fi
+
+    local answer
+    answer=$(prompt "Install Gitbacker to $default? [Y/n]" "y")
+    case "$answer" in
+      ""|[yY]|[yY][eE][sS])
+        printf "%s" "$default"
+        ;;
+      *)
+        local custom
+        custom=$(prompt "Enter install path:" "$default")
+        # Expand leading ~ manually (shell doesn't expand from read)
+        custom="${custom/#\~/$HOME}"
+        printf "%s" "${custom:-$default}"
+        ;;
+    esac
+  }
 
   check_command() {
     command -v "$1" >/dev/null 2>&1 || fail "$1 is required but not installed. See https://docs.docker.com/get-docker/"
@@ -58,6 +101,10 @@ main() {
   ok "Docker and Docker Compose found"
 
   # --- Install directory ---
+
+  INSTALL_DIR=$(choose_install_dir)
+  info "Using install directory: $INSTALL_DIR"
+
 
   # If an existing install is found (either compose.yml OR .env present),
   # take the update path. Never regenerate secrets on top of an existing install.
