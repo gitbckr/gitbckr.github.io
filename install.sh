@@ -75,8 +75,7 @@ main() {
 
   # --- Create data directories ---
 
-  DATA_DIR="${INSTALL_DIR}/data"
-  mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/redis" "$DATA_DIR/backups"
+  mkdir -p "${INSTALL_DIR}/data/postgres" "${INSTALL_DIR}/data/redis" "${INSTALL_DIR}/data/backups"
 
   # --- Download configuration ---
 
