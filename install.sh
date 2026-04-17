@@ -59,13 +59,28 @@ main() {
 
   # --- Install directory ---
 
-  if [ -d "$INSTALL_DIR" ] && [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
-    warn "Existing installation found at $INSTALL_DIR"
-    warn "Pulling latest images and restarting..."
+  # If an existing install is found (either compose.yml OR .env present),
+  # take the update path. Never regenerate secrets on top of an existing install.
+  if [ -d "$INSTALL_DIR" ] && { [ -f "$INSTALL_DIR/docker-compose.yml" ] || [ -f "$INSTALL_DIR/.env" ]; }; then
+    info "Existing installation detected at $INSTALL_DIR — updating in place"
     cd "$INSTALL_DIR"
+
+    # Refresh compose file to pick up any new services/env vars/volumes.
+    # .env and .admin-credentials are preserved (never overwritten).
+    info "Refreshing docker-compose.yml..."
+    curl -fsSL "$REPO/docker-compose.yml" -o docker-compose.yml
+
+    info "Pulling latest images..."
     VERSION="$VERSION" docker compose pull </dev/null
+
+    info "Restarting services..."
     VERSION="$VERSION" docker compose up -d </dev/null
+
     ok "Gitbacker updated and running at http://localhost:3000"
+    if [ -f ".admin-credentials" ]; then
+      echo ""
+      echo "  Your admin credentials are in: $INSTALL_DIR/.admin-credentials"
+    fi
     exit 0
   fi
 
