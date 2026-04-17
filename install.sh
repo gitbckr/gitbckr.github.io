@@ -73,6 +73,11 @@ main() {
   mkdir -p "$INSTALL_DIR"
   cd "$INSTALL_DIR"
 
+  # --- Create data directories ---
+
+  DATA_DIR="${INSTALL_DIR}/data"
+  mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/redis" "$DATA_DIR/backups"
+
   # --- Download configuration ---
 
   info "Downloading configuration..."
