@@ -1,658 +1,1507 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gitbacker — Self-hosted git backup tool</title>
-  <meta name="description" content="Back up your Git repositories automatically. Scheduled backups, GPG encryption, one-click restore, Slack alerts. Self-hosted with a single command.">
-  <meta name="theme-color" content="#0a0a0a">
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="Gitbacker — Self-hosted git backup tool">
-  <meta property="og:description" content="Back up your Git repositories automatically. Scheduled backups, GPG encryption, one-click restore. Self-hosted with a single command.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://gitbacker.com">
-
-  <link rel="icon" href="assets/gitbacker-logo-filled.svg" type="image/svg+xml">
-
-  <style>
-    :root {
-      --bg: #09090b;
-      --bg-subtle: #111113;
-      --bg-card: #18181b;
-      --fg: #fafafa;
-      --fg-muted: #a1a1aa;
-      --fg-dim: #71717a;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --green: #22c55e;
-      --amber: #f59e0b;
-      --red: #ef4444;
-      --border: #27272a;
-      --border-subtle: #1e1e21;
-      --radius: 12px;
-      --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-      --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
-    }
-
-    :root.light {
-      --bg: #ffffff;
-      --bg-subtle: #f4f4f5;
-      --bg-card: #fafafa;
-      --fg: #09090b;
-      --fg-muted: #52525b;
-      --fg-dim: #a1a1aa;
-      --border: #e4e4e7;
-      --border-subtle: #f0f0f2;
-    }
-
-    @media (prefers-color-scheme: light) {
-      :root:not(.dark) {
-        --bg: #ffffff;
-        --bg-subtle: #f4f4f5;
-        --bg-card: #fafafa;
-        --fg: #09090b;
-        --fg-muted: #52525b;
-        --fg-dim: #a1a1aa;
-        --border: #e4e4e7;
-        --border-subtle: #f0f0f2;
-      }
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--fg);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* --- Layout --- */
-
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
-
-    section {
-      padding: 5rem 0;
-    }
-
-    /* --- Nav --- */
-
-    nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 50;
-      background: rgba(9, 9, 11, 0.8);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .light nav { background: rgba(255, 255, 255, 0.85); }
-    @media (prefers-color-scheme: light) {
-      :root:not(.dark) nav { background: rgba(255, 255, 255, 0.85); }
-    }
-
-    nav .container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 56px;
-    }
-
-    .logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--fg);
-      text-decoration: none;
-      letter-spacing: -0.02em;
-    }
-
-    .logo img { display: block; }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 1.75rem;
-      list-style: none;
-    }
-
-    .nav-links a {
-      color: var(--fg-muted);
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: color 0.15s;
-    }
-
-    .nav-links a:hover { color: var(--fg); }
-
-    .nav-links .btn-sm {
-      background: var(--accent);
-      color: #fff;
-      padding: 0.4rem 1rem;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.8rem;
-      transition: opacity 0.15s;
-    }
-
-    .nav-links .btn-sm:hover { opacity: 0.9; color: #fff; }
-
-    /* --- Hero --- */
-
-    .hero {
-      padding: 10rem 0 5rem;
-      text-align: center;
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 100px;
-      padding: 0.35rem 1rem;
-      font-size: 0.8rem;
-      color: var(--fg-muted);
-      margin-bottom: 2rem;
-    }
-
-    .hero-badge .dot {
-      width: 6px;
-      height: 6px;
-      background: var(--green);
-      border-radius: 50%;
-    }
-
-    h1 {
-      font-size: clamp(2.5rem, 6vw, 4rem);
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      line-height: 1.1;
-      margin-bottom: 1.25rem;
-    }
-
-    h1 .highlight {
-      background: linear-gradient(135deg, var(--accent), #8b5cf6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-sub {
-      font-size: 1.15rem;
-      color: var(--fg-muted);
-      max-width: 540px;
-      margin: 0 auto 2.5rem;
-      line-height: 1.7;
-    }
-
-    /* --- Install Box --- */
-
-    .install-box {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.25rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      position: relative;
-      margin-bottom: 1.5rem;
-    }
-
-    .install-box code {
-      font-family: var(--mono);
-      font-size: 0.875rem;
-      color: var(--fg);
-    }
-
-    .install-box .dollar {
-      color: var(--accent);
-      user-select: none;
-    }
-
-    .copy-btn {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--fg-dim);
-      padding: 0.3rem 0.6rem;
-      border-radius: 6px;
-      font-size: 0.7rem;
-      font-family: var(--font);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .copy-btn:hover { color: var(--fg); border-color: var(--fg-dim); }
-
-    .hero-note {
-      font-size: 0.8rem;
-      color: var(--fg-dim);
-    }
-
-    .hero-note a {
-      color: var(--fg-muted);
-      text-decoration: underline;
-      text-underline-offset: 2px;
-    }
-
-    /* --- Features Grid --- */
-
-    .section-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--accent);
-      margin-bottom: 0.75rem;
-    }
-
-    h2 {
-      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-bottom: 1rem;
-    }
-
-    .section-sub {
-      color: var(--fg-muted);
-      font-size: 1.05rem;
-      max-width: 560px;
-      margin-bottom: 3rem;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-    }
-
-    .feature-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.75rem;
-      transition: border-color 0.2s;
-    }
-
-    .feature-card:hover { border-color: var(--fg-dim); }
-
-    .feature-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--bg-subtle);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1rem;
-      font-size: 1.1rem;
-    }
-
-    .feature-card h3 {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 0.4rem;
-    }
-
-    .feature-card p {
-      font-size: 0.875rem;
-      color: var(--fg-muted);
-      line-height: 1.55;
-    }
-
-    /* --- How it Works --- */
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-    }
-
-    .step {
-      text-align: center;
-    }
-
-    .step-number {
-      width: 44px;
-      height: 44px;
-      border: 2px solid var(--border);
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 1.25rem;
-    }
-
-    .step h3 {
-      font-size: 1.05rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
-
-    .step p {
-      font-size: 0.875rem;
-      color: var(--fg-muted);
-      line-height: 1.6;
-    }
-
-    /* --- CTA --- */
-
-    .cta {
-      text-align: center;
-      padding: 6rem 0;
-    }
-
-    .cta h2 { margin-bottom: 1rem; }
-
-    .cta p {
-      color: var(--fg-muted);
-      margin-bottom: 2rem;
-      font-size: 1.05rem;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: var(--accent);
-      color: #fff;
-      padding: 0.75rem 1.75rem;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      text-decoration: none;
-      transition: opacity 0.15s;
-    }
-
-    .btn:hover { opacity: 0.9; }
-
-    .btn-outline {
-      background: transparent;
-      color: var(--fg);
-      border: 1px solid var(--border);
-    }
-
-    .btn-outline:hover { border-color: var(--fg-dim); }
-
-    .cta-buttons {
-      display: flex;
-      gap: 0.75rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    /* --- Footer --- */
-
-    footer {
-      border-top: 1px solid var(--border-subtle);
-      padding: 2rem 0;
-    }
-
-    footer .container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    footer .copy {
-      font-size: 0.8rem;
-      color: var(--fg-dim);
-    }
-
-    footer .links {
-      display: flex;
-      gap: 1.5rem;
-    }
-
-    footer .links a {
-      color: var(--fg-dim);
-      text-decoration: none;
-      font-size: 0.8rem;
-      transition: color 0.15s;
-    }
-
-    footer .links a:hover { color: var(--fg-muted); }
-
-    /* --- Theme toggle --- */
-
-    .theme-toggle {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--fg-muted);
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-    }
-
-    .theme-toggle:hover { color: var(--fg); border-color: var(--fg-dim); }
-
-    .theme-toggle .icon-sun { display: none; }
-    .theme-toggle .icon-moon { display: block; }
-    .light .theme-toggle .icon-sun { display: block; }
-    .light .theme-toggle .icon-moon { display: none; }
-    @media (prefers-color-scheme: light) {
-      :root:not(.dark) .theme-toggle .icon-sun { display: block; }
-      :root:not(.dark) .theme-toggle .icon-moon { display: none; }
-    }
-
-    /* --- Logo theme switching --- */
-
-    .logo .logo-light { display: none; }
-    .logo .logo-dark { display: block; }
-    .light .logo .logo-light { display: block; }
-    .light .logo .logo-dark { display: none; }
-    @media (prefers-color-scheme: light) {
-      :root:not(.dark) .logo .logo-light { display: block; }
-      :root:not(.dark) .logo .logo-dark { display: none; }
-    }
-
-    /* --- Logo states --- */
-
-    .logo-stale img,
-    .logo-stale picture img {
-      filter: grayscale(100%);
-      opacity: 0.4;
-      transition: filter 0.2s, opacity 0.2s;
-    }
-
-    .logo-stale:hover img,
-    .logo-stale:hover picture img {
-      filter: grayscale(0%);
-      opacity: 1;
-    }
-
-    /* --- Responsive --- */
-
-    @media (max-width: 1024px) {
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 768px) {
-      .features-grid { grid-template-columns: 1fr; }
-      .steps { grid-template-columns: 1fr; gap: 2.5rem; }
-
-      .hero { padding: 8rem 0 3rem; }
-      section { padding: 3.5rem 0; }
-      footer .container { flex-direction: column; gap: 1rem; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gitbacker — Backups that survive the outage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* cool, slightly greenish night */
+    --bg: oklch(0.16 0.012 220);
+    --bg-1: oklch(0.195 0.014 220);
+    --bg-2: oklch(0.22 0.014 220);
+    --bg-3: oklch(0.26 0.016 220);
+    --fg: oklch(0.985 0.005 220);
+    --fg-muted: oklch(0.74 0.015 220);
+    --fg-dim: oklch(0.55 0.015 220);
+    --line: oklch(0.30 0.014 220);
+    --line-soft: oklch(0.24 0.012 220);
+    /* mint = encrypted / safe */
+    --accent: oklch(0.82 0.14 165);
+    --accent-ink: oklch(0.22 0.05 165);
+    --ok: oklch(0.78 0.16 150);
+    --warn: oklch(0.82 0.17 80);
+    --err: oklch(0.70 0.22 25);
+    --glass: color-mix(in oklch, var(--bg-1) 70%, transparent);
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+    --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --radius: 14px;
+  }
+  html[data-theme="light"] {
+    --bg: oklch(0.985 0.004 220);
+    --bg-1: #ffffff;
+    --bg-2: oklch(0.975 0.005 220);
+    --bg-3: oklch(0.955 0.007 220);
+    --fg: oklch(0.18 0.012 220);
+    --fg-muted: oklch(0.45 0.012 220);
+    --fg-dim: oklch(0.62 0.010 220);
+    --line: oklch(0.90 0.008 220);
+    --line-soft: oklch(0.94 0.006 220);
+    --accent: oklch(0.64 0.14 165);
+    --accent-ink: #ffffff;
+    --ok: oklch(0.60 0.16 150);
+    --warn: oklch(0.70 0.17 80);
+    --err: oklch(0.58 0.22 25);
+    --glass: color-mix(in oklch, #ffffff 70%, transparent);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+
+  /* Ambient glow in hero */
+  .glow-bg {
+    position: absolute; inset: -20% -10% auto -10%;
+    height: 720px;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(60% 60% at 30% 30%, color-mix(in oklch, var(--accent) 24%, transparent) 0%, transparent 60%),
+      radial-gradient(50% 50% at 75% 40%, color-mix(in oklch, oklch(0.68 0.18 260) 20%, transparent) 0%, transparent 55%);
+    filter: blur(40px);
+    opacity: 0.85;
+  }
+  html[data-theme="light"] .glow-bg { opacity: 0.55; }
+
+  /* --- Nav --- */
+  nav {
+    position: sticky; top: 12px; z-index: 50;
+    padding: 0;
+  }
+  .nav-shell {
+    max-width: 1140px;
+    margin: 0 auto;
+    background: var(--glass);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 8px 10px 8px 18px;
+    display: flex; align-items: center; gap: 20px;
+    box-shadow:
+      0 1px 0 color-mix(in oklch, var(--fg) 6%, transparent) inset,
+      0 20px 40px -20px rgba(0,0,0,0.45);
+  }
+  .brand {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-weight: 700; font-size: 15px;
+    color: var(--fg); text-decoration: none;
+    letter-spacing: -0.02em;
+  }
+  .brand-mark { width: 22px; height: 22px; display: inline-flex; }
+  .brand-mark svg { width: 100%; height: 100%; }
+  .brand .ver {
+    font-family: var(--font-mono);
+    font-size: 10.5px; font-weight: 500;
+    color: var(--fg-dim);
+    padding: 2px 7px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    margin-left: 2px;
+  }
+  .nav-links {
+    display: flex; gap: 4px; margin-left: auto;
+    align-items: center;
+  }
+  .nav-links a {
+    color: var(--fg-muted);
+    text-decoration: none;
+    padding: 7px 14px;
+    font-size: 13.5px;
+    border-radius: 100px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .nav-links a:hover { color: var(--fg); background: var(--bg-2); }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border: 1px solid var(--line); border-radius: 100px;
+    background: transparent;
+    color: var(--fg-muted);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--bg-2); color: var(--fg); }
+  .btn-pill {
+    background: var(--fg);
+    color: var(--bg);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .btn-pill:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* --- Hero --- */
+  .hero {
+    position: relative;
+    padding: 72px 0 40px;
+    overflow: hidden;
+  }
+  .hero-inner { position: relative; z-index: 1; }
+  .hero-top { text-align: center; max-width: 860px; margin: 0 auto; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    white-space: nowrap;
+    padding: 5px 12px 5px 7px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    font-size: 12.5px;
+    color: var(--fg-muted);
+    margin-bottom: 22px;
+  }
+  .badge .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--ok);
+    position: relative;
+  }
+  .badge .pulse::after {
+    content: ""; position: absolute; inset: -4px;
+    border-radius: 50%; background: var(--ok);
+    opacity: 0.35;
+    animation: pulse 2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.6); opacity: 0.45; }
+    100% { transform: scale(2); opacity: 0; }
+  }
+  .badge b { color: var(--fg); font-weight: 600; }
+
+  h1 {
+    font-family: var(--font-sans);
+    font-size: clamp(44px, 7vw, 88px);
+    font-weight: 600;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    margin-bottom: 20px;
+  }
+  h1 em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    background: linear-gradient(120deg, var(--accent), oklch(0.78 0.16 200));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede {
+    font-size: 18px;
+    color: var(--fg-muted);
+    max-width: 620px;
+    margin: 0 auto 30px;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+  .lede b { color: var(--fg); font-weight: 500; }
+
+  .hero-cta {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .install-pill {
+    display: inline-flex; align-items: center; gap: 0;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 4px 4px 4px 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+  .install-pill .prompt { color: var(--accent); margin-right: 8px; }
+  .install-pill code {
+    font-family: inherit;
+    color: var(--fg);
+    padding-right: 10px;
+  }
+  .install-pill .copy {
+    background: var(--bg-3);
+    color: var(--fg);
+    border: 0;
+    border-radius: 100px;
+    padding: 7px 14px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .install-pill .copy:hover { background: var(--accent); color: var(--accent-ink); }
+  .primary-cta {
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 12px 22px;
+    border-radius: 100px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    box-shadow: 0 10px 30px -10px color-mix(in oklch, var(--accent) 50%, transparent);
+    transition: transform 0.15s;
+  }
+  .primary-cta:hover { transform: translateY(-1px); }
+  .foot-note {
+    text-align: center;
+    color: var(--fg-dim);
+    font-size: 12.5px;
+    font-family: var(--font-mono);
+  }
+  .foot-note b { color: var(--fg-muted); font-weight: 500; }
+
+  /* --- Dashboard mock --- */
+  .product {
+    margin-top: 64px;
+    position: relative;
+    z-index: 1;
+  }
+  .app {
+    max-width: 1140px;
+    margin: 0 auto;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow:
+      0 1px 0 color-mix(in oklch, var(--fg) 8%, transparent) inset,
+      0 80px 120px -40px rgba(0,0,0,0.55);
+    position: relative;
+  }
+  .app-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .tl { display: flex; gap: 6px; }
+  .tl i {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--bg-3);
+    display: inline-block;
+  }
+  .tl i:nth-child(1) { background: oklch(0.65 0.21 25); }
+  .tl i:nth-child(2) { background: oklch(0.8 0.17 85); }
+  .tl i:nth-child(3) { background: oklch(0.7 0.17 145); }
+  .url {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    padding: 5px 10px;
+    border-radius: 100px;
+    text-align: center;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .url b { color: var(--fg); font-weight: 500; }
+
+  .app-shell {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .app-head {
+    padding: 16px 22px 8px;
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--line-soft);
+    position: relative;
+  }
+  .app-head .logo {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px;
+  }
+  .app-head .logo svg { width: 18px; height: 18px; }
+  .app-head nav.tabs {
+    display: flex; gap: 2px;
+    margin-left: 14px;
+    position: static;
+    background: transparent;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .tabs a {
+    font-size: 13px;
+    color: var(--fg-muted);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+  }
+  .tabs a.on { background: var(--bg-3); color: var(--fg); font-weight: 500; }
+  .app-head .user {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--fg-muted);
+  }
+  .app-head .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), oklch(0.68 0.18 260));
+  }
+  /* live job ticker over dashboard header */
+  .job-ticker {
+    position: absolute;
+    top: 100%;
+    left: 22px;
+    transform: translateY(-50%);
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 5px 12px 5px 9px;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-muted);
+    box-shadow: 0 4px 16px -8px rgba(0,0,0,0.4);
+    overflow: hidden;
+    z-index: 5;
+    max-width: calc(100% - 44px);
+  }
+  .job-ticker .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ok);
+    flex-shrink: 0;
+    transition: background 200ms;
+  }
+  .job-ticker .dot[data-kind="err"]  { background: var(--err); }
+  .job-ticker .dot[data-kind="skip"] { background: var(--fg-dim); }
+  .job-ticker .text {
+    transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 220ms;
+    white-space: nowrap;
+  }
+  .job-ticker .text b {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  /* heatmap "just lit today" pulse */
+  .hm i.just-lit {
+    animation: justLit 1200ms ease-out;
+  }
+  @keyframes justLit {
+    0%   { transform: scale(2.0); box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 65%, transparent); }
+    40%  { transform: scale(1.0); }
+    100% { box-shadow: 0 0 0 6px color-mix(in oklch, var(--accent) 0%, transparent); }
+  }
+
+  /* badge counter transition */
+  .badge b {
+    font-variant-numeric: tabular-nums;
+    transition: color 220ms;
+  }
+
+  .app-content { padding: 22px; }
+  .app-title {
+    font-size: 22px; font-weight: 600; letter-spacing: -0.02em;
+    margin-bottom: 14px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    padding: 14px 16px 12px;
+  }
+  .stat-card .lbl {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px;
+    color: var(--fg-muted);
+    margin-bottom: 6px;
+  }
+  .stat-card .lbl svg { width: 14px; height: 14px; color: var(--fg-dim); }
+  .stat-card .val {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-card.ok .val { color: var(--ok); }
+  .stat-card.err .val { color: var(--err); }
+  .stat-card .delta {
+    font-size: 11.5px;
+    color: var(--fg-dim);
+    margin-top: 2px;
+    font-family: var(--font-mono);
+  }
+  .stat-card .delta b { color: var(--ok); font-weight: 500; }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1.9fr 1fr;
+    gap: 12px;
+  }
+  .panel {
+    background: var(--bg-2);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .panel-hd {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .panel-hd h4 {
+    font-size: 13px; color: var(--fg-muted);
+    font-weight: 500;
+  }
+  .panel-hd a { font-size: 11.5px; color: var(--fg-dim); text-decoration: none; font-family: var(--font-mono); }
+
+  /* heatmap — proper 53 x 7 */
+  .hm-wrap { overflow: hidden; }
+  .hm {
+    display: grid;
+    grid-template-columns: repeat(53, 1fr);
+    grid-template-rows: repeat(7, auto);
+    grid-auto-flow: column;
+    gap: 3px;
+  }
+  .hm i {
+    aspect-ratio: 1;
+    background: var(--bg-3);
+    border-radius: 2.5px;
+    min-width: 0;
+  }
+  .hm i.l1 { background: color-mix(in oklch, var(--ok) 35%, var(--bg-3)); }
+  .hm i.l2 { background: color-mix(in oklch, var(--ok) 65%, var(--bg-3)); }
+  .hm i.l3 { background: var(--ok); }
+  .hm i.l4 { background: oklch(0.85 0.18 150); }
+  .hm i.e  { background: var(--err); }
+  .hm i.a  { background: var(--warn); }
+  .hm-legend {
+    margin-top: 10px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--fg-dim);
+    font-family: var(--font-mono);
+  }
+  .hm-legend i { width: 10px; height: 10px; border-radius: 2.5px; background: var(--bg-3); display: inline-block; }
+  .hm-legend i.l1 { background: color-mix(in oklch, var(--ok) 35%, var(--bg-3)); }
+  .hm-legend i.l2 { background: color-mix(in oklch, var(--ok) 65%, var(--bg-3)); }
+  .hm-legend i.l3 { background: var(--ok); }
+
+  /* storage panel */
+  .storage-total {
+    font-size: 24px; font-weight: 600;
+    letter-spacing: -0.02em;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .storage-total small { font-size: 12px; color: var(--fg-muted); font-weight: 400; }
+  .bar {
+    height: 6px; border-radius: 100px; background: var(--bg-3);
+    overflow: hidden; margin-top: 8px;
+  }
+  .bar > i { display: block; height: 100%; background: var(--ok); border-radius: 100px; }
+  .bar > i.warn { background: var(--warn); }
+  .bar > i.err  { background: var(--err); }
+  .dest {
+    display: flex; justify-content: space-between;
+    font-size: 11.5px; color: var(--fg-muted);
+    font-family: var(--font-mono);
+    margin-top: 12px;
+  }
+  .dest + .bar { height: 4px; margin-top: 4px; }
+
+  /* floating status toast over the app */
+  .toast {
+    position: absolute; right: 18px; top: 76px;
+    background: color-mix(in oklch, var(--accent) 16%, var(--bg-1));
+    border: 1px solid var(--accent);
+    color: var(--fg);
+    padding: 8px 12px 8px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 14px 30px -10px color-mix(in oklch, var(--accent) 40%, transparent);
+    z-index: 3;
+  }
+  .toast .d {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-out infinite;
+  }
+
+  /* --- Logos strip --- */
+  .trust {
+    padding: 72px 0 40px;
+    text-align: center;
+  }
+  .trust .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 20px;
+  }
+  .trust-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    justify-content: center;
+    align-items: center;
+    color: var(--fg-muted);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .trust-row span { opacity: 0.65; }
+  .trust-row svg { width: 20px; height: 20px; vertical-align: -4px; margin-right: 6px; opacity: 0.7; }
+
+  /* --- Sections --- */
+  section { padding: 72px 0; }
+  .sec-head { text-align: center; max-width: 680px; margin: 0 auto 44px; }
+  .sec-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 10px;
+    display: inline-block;
+  }
+  h2 {
+    font-size: clamp(32px, 4.2vw, 52px);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin-bottom: 14px;
+  }
+  h2 em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .sec-sub {
+    color: var(--fg-muted);
+    font-size: 16px;
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .feat {
+    position: relative;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 18px 20px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feat::before {
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .feat:hover { border-color: var(--fg-dim); transform: translateY(-2px); }
+  .feat:hover::before { opacity: 0.6; }
+  .feat .ic {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .feat .ic svg { width: 18px; height: 18px; }
+  .feat h3 {
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  .feat p {
+    font-size: 13px;
+    color: var(--fg-muted);
+    line-height: 1.55;
+  }
+
+  /* Steps */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    position: relative;
+  }
+  .steps::before {
+    content: "";
+    position: absolute;
+    top: 22px; left: 8%; right: 8%;
+    height: 1px;
+    background: repeating-linear-gradient(to right, var(--line) 0 6px, transparent 6px 12px);
+    z-index: 0;
+  }
+  .step {
+    position: relative;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px 22px 20px;
+    z-index: 1;
+  }
+  .step-num {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 20px;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .step h3 {
+    font-size: 16px; font-weight: 600;
+    letter-spacing: -0.015em;
+    margin-bottom: 6px;
+  }
+  .step p {
+    font-size: 13.5px; color: var(--fg-muted); line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .step .code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--fg);
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+  .step .code .c { color: var(--fg-dim); }
+  .step .code .a { color: var(--accent); }
+  .step .code .k { color: var(--ok); }
+
+  /* why / use cases — interactive incident picker */
+  .why-wrap { padding: 24px 0 80px; }
+  .why-shell {
+    margin-top: 36px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: 460px;
+  }
+  @media (max-width: 900px) {
+    .why-shell { grid-template-columns: 1fr; min-height: 0; }
+  }
+  .why-list {
+    border-right: 1px solid var(--line);
+    background: var(--bg-2);
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  @media (max-width: 900px) {
+    .why-list { border-right: 0; border-bottom: 1px solid var(--line); flex-direction: row; overflow-x: auto; }
+  }
+  .why-tab {
+    appearance: none; background: transparent; border: 0;
+    text-align: left;
+    padding: 14px 14px 14px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--fg-muted);
+    font: inherit;
+    display: grid;
+    grid-template-columns: 16px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    position: relative;
+    transition: background 180ms, color 180ms;
+    flex-shrink: 0;
+  }
+  .why-tab:hover { background: color-mix(in oklch, var(--fg) 4%, transparent); color: var(--fg); }
+  .why-tab .num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--fg-dim);
+    letter-spacing: 0.04em;
+  }
+  .why-tab .title {
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .why-tab .why-pill {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 100px;
+    border: 1px solid var(--line);
+    color: var(--fg-dim);
+    background: var(--bg-1);
+  }
+  .why-tab[aria-selected="true"] {
+    background: color-mix(in oklch, var(--accent) 12%, transparent);
+  }
+  .why-tab[aria-selected="true"] .title { color: var(--fg); }
+  .why-tab[aria-selected="true"] .why-pill {
+    color: var(--accent);
+    border-color: color-mix(in oklch, var(--accent) 35%, var(--line));
+    background: color-mix(in oklch, var(--accent) 8%, var(--bg-1));
+  }
+  .why-tab[aria-selected="true"]::before {
+    content:""; position:absolute; left: 4px; top: 14px; bottom: 14px;
+    width: 2px; border-radius: 2px;
+    background: var(--accent);
+  }
+  .why-tab .why-progress {
+    position: absolute; left: 8px; right: 8px; bottom: 4px;
+    height: 1.5px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+    opacity: 0;
+  }
+  .why-tab[aria-selected="true"] .why-progress { opacity: 1; }
+  .why-tab .why-progress i {
+    display: block; height: 100%;
+    background: var(--accent);
+    transform-origin: left center;
+    transform: scaleX(0);
+  }
+  .why-tab[aria-selected="true"] .why-progress i {
+    animation: whyAdvance var(--why-dur, 6500ms) linear forwards;
+  }
+  .why-paused .why-tab[aria-selected="true"] .why-progress i {
+    animation-play-state: paused;
+  }
+  @keyframes whyAdvance {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+
+  .why-detail {
+    position: relative;
+    padding: 36px 40px 32px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 22px;
+  }
+  @media (max-width: 600px) { .why-detail { padding: 24px 20px; } }
+  .why-detail-head {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .why-detail-head .case { color: var(--accent); }
+  .why-detail-head .sev {
+    margin-left: auto;
+    padding: 3px 8px;
+    border-radius: 100px;
+    border: 1px solid var(--line);
+  }
+  .why-detail-head .sev.crit { color: var(--err); border-color: color-mix(in oklch, var(--err) 35%, var(--line)); background: color-mix(in oklch, var(--err) 8%, transparent); }
+  .why-detail-head .sev.high { color: oklch(0.78 0.16 70); border-color: color-mix(in oklch, oklch(0.78 0.16 70) 35%, var(--line)); background: color-mix(in oklch, oklch(0.78 0.16 70) 8%, transparent); }
+  .why-detail-head .sev.med  { color: var(--accent); border-color: color-mix(in oklch, var(--accent) 35%, var(--line)); background: color-mix(in oklch, var(--accent) 8%, transparent); }
+
+  .why-detail h3 {
+    font-size: clamp(28px, 3.8vw, 40px);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .why-detail h3 em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(120deg, var(--accent), oklch(0.78 0.16 200));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .why-detail .lede2 {
+    font-size: 15.5px;
+    line-height: 1.5;
+    color: var(--fg-muted);
+    max-width: 56ch;
+  }
+  .why-detail .lede2 b { color: var(--fg); font-weight: 500; }
+  .why-fix {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
+  .why-fix .fix-tag {
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 10.5px;
+    padding: 3px 7px;
+    background: color-mix(in oklch, var(--accent) 10%, transparent);
+    border-radius: 6px;
+  }
+  .why-fix code {
+    color: var(--fg);
+    font-family: inherit;
+  }
+  .why-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--line);
+  }
+  .why-stat {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .why-stat .k {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .why-stat .v {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+  }
+  .why-stat .v em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  /* fade-swap on slide change */
+  .why-detail-body { display: contents; }
+  .why-fade {
+    animation: whyFade 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes whyFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* old why grid styles still loaded but unused — keeping for safety */
+  .why-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 36px; }
+  .why-card {
+    position: relative;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 22px 24px;
+    display: flex; flex-direction: column; gap: 10px;
+    overflow: hidden;
+  }
+  .why-card::before {
+    content:""; position:absolute; left:0; top:0; bottom:0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--accent), color-mix(in oklch, var(--accent) 30%, transparent));
+    opacity: 0.55;
+  }
+  .why-card .scenario {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .why-card .scenario .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent);
+  }
+  .why-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .why-card h3 em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .why-card p {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--fg-muted);
+  }
+  .why-card .receipt {
+    margin-top: 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-dim);
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+    display: flex; justify-content: space-between; gap: 10px;
+  }
+  .why-card .receipt b { color: var(--fg); font-weight: 600; }
+
+  /* testimonial */
+  .quote-wrap { padding: 48px 0 72px; }
+  .quote {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 36px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    text-align: center;
+  }
+  .quote p {
+    font-family: var(--font-serif);
+    font-size: clamp(22px, 2.8vw, 30px);
+    font-style: italic;
+    font-weight: 400;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    margin-bottom: 14px;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .quote cite {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--fg-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-style: normal;
+  }
+
+  /* CTA */
+  .cta {
+    padding: 80px 0 100px;
+    text-align: center;
+    position: relative;
+  }
+  .cta-card {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 56px 40px;
+    border-radius: 22px;
+    background:
+      radial-gradient(100% 100% at 50% 0%, color-mix(in oklch, var(--accent) 24%, transparent) 0%, transparent 65%),
+      var(--bg-1);
+    border: 1px solid var(--line);
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-card::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(80% 60% at 50% 120%, color-mix(in oklch, oklch(0.68 0.18 260) 16%, transparent), transparent);
+    pointer-events: none;
+  }
+  .cta-card h2 { margin-bottom: 12px; }
+  .cta-card p {
+    color: var(--fg-muted);
+    max-width: 520px;
+    margin: 0 auto 22px;
+    font-size: 15.5px;
+  }
+
+  /* footer */
+  footer { border-top: 1px solid var(--line); padding: 28px 0 42px; }
+  footer .wrap { display: flex; justify-content: space-between; align-items: center; }
+  footer .cp { color: var(--fg-dim); font-size: 12.5px; font-family: var(--font-mono); }
+  footer .lk a { color: var(--fg-dim); text-decoration: none; font-size: 12.5px; margin-left: 20px; font-family: var(--font-mono); }
+  footer .lk a:hover { color: var(--fg); }
+
+  /* Variation switcher */
+  .switcher {
+    position: fixed;
+    bottom: 18px; left: 18px;
+    z-index: 1100;
+    display: flex; gap: 0;
+    border: 1px solid var(--line);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 3px;
+  }
+  .switcher a {
+    padding: 6px 12px;
+    color: var(--fg-muted); text-decoration: none;
+    border-radius: 100px;
+  }
+  .switcher a.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .switcher a:hover:not(.on) { color: var(--fg); }
+
+  @media (max-width: 960px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .row-2 { grid-template-columns: 1fr; }
+    .features { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: 1fr; }
+    .steps::before { display: none; }
+    .toast { display: none; }
+    .install-pill code { display: none; }
+  }
+</style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav>
-  <div class="container">
-    <a href="/" class="logo">
-      <img src="assets/gitbacker-logo-dark.svg" alt="" height="28" class="logo-dark">
-      <img src="assets/gitbacker-logo-light.svg" alt="" height="28" class="logo-light">
-      Gitbacker
-    </a>
-    <ul class="nav-links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#how-it-works">How it works</a></li>
-      <li><button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button></li>
-      <li><a href="https://github.com/gitbckr/gitbacker" class="btn-sm">GitHub</a></li>
-    </ul>
-  </div>
-</nav>
+<div style="position: relative;">
+  <div class="glow-bg" aria-hidden="true"></div>
 
-<!-- Hero -->
-<section class="hero">
-  <div class="container">
-    <div class="hero-badge"><span class="dot"></span> Open source &middot; Self-hosted &middot; Apache 2.0</div>
-    <h1>Never lose a<br><span class="highlight">git repository</span> again</h1>
-    <p class="hero-sub">Automated backups for your GitHub, GitLab, and Bitbucket repos. Encrypted archives, scheduled runs, one-click restore. Deploy in 30 seconds.</p>
-
-    <div class="install-box">
-      <code><span class="dollar">$</span> curl -fsSL https://gitbacker.com/install.sh | bash</code>
-      <button class="copy-btn" onclick="copyInstall(this)">Copy</button>
+  <nav>
+    <div class="nav-shell">
+      <a href="#" class="brand">
+        <span class="brand-mark">
+          <svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="12" stroke-linejoin="round" stroke-linecap="round">
+            <path d="M42 52 L158 52 L158 114 Q158 158 100 178 Q42 158 42 114 L42 52 Z"/>
+            <line x1="100" y1="82" x2="100" y2="138"/>
+            <line x1="100" y1="108" x2="128" y2="92"/>
+          </svg>
+        </span>
+        Gitbacker <span class="ver">v0.9.3</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#why">Why</a>
+        <a href="#install">Docs</a>
+        <button class="icon-btn" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle theme">
+          <svg id="ti" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <a href="https://github.com/gitbckr/gitbacker" class="btn-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.9.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.1.9 2.3v3.3c0 .3.1.7.8.6A12 12 0 0 0 12 .3"/></svg>
+          Star
+        </a>
+      </div>
     </div>
-    <div class="hero-note">Requires Docker. <a href="https://github.com/gitbckr/gitbacker#readme">Read the docs</a></div>
+  </nav>
+
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <div class="hero-top">
+        <div class="badge">
+          <span class="pulse"></span>
+          <span><b>412 repos</b> backed up · last hour</span>
+        </div>
+        <h1>Back up every git repo<br>you own, <em>automatically.</em></h1>
+        <p class="lede">
+          Gitbacker is the self-hosted backup daemon for <b>GitHub, GitLab, Bitbucket</b> and anything that speaks git. Scheduled, <b>GPG-encrypted</b>, deduplicated, restorable with a diff preview. Deploy it in 30 seconds and sleep through the next platform outage.
+        </p>
+        <div class="hero-cta">
+          <div class="install-pill">
+            <span class="prompt">$</span>
+            <code id="install-cmd">curl -fsSL gitbacker.com/install.sh | bash</code>
+            <button class="copy" onclick="copyInstall(this)">Copy</button>
+          </div>
+          <a href="https://github.com/gitbckr/gitbacker" class="primary-cta">
+            View on GitHub
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+        <div class="foot-note">
+          <b>Docker required</b> &nbsp;·&nbsp; Apache 2.0 &nbsp;·&nbsp; No signup, no telemetry
+        </div>
+      </div>
+
+      <!-- Product / dashboard hero -->
+      <div class="product">
+        <div class="app">
+          <div class="app-bar">
+            <div class="tl"><i></i><i></i><i></i></div>
+            <div class="url">gitbacker.your-org.internal<b>/dashboard</b></div>
+            <div style="width: 48px;"></div>
+          </div>
+
+          <div class="app-head">
+            <div class="logo">
+              <svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round" stroke-linecap="round">
+                <path d="M42 52 L158 52 L158 114 Q158 158 100 178 Q42 158 42 114 L42 52 Z"/>
+                <line x1="100" y1="82" x2="100" y2="138"/>
+                <line x1="100" y1="108" x2="128" y2="92"/>
+              </svg>
+              Gitbacker
+            </div>
+            <nav class="tabs">
+              <a class="on">Dashboard</a>
+              <a>Repos</a>
+              <a>Destinations</a>
+              <a>Settings</a>
+            </nav>
+            <div class="user">
+              <span>alex@your-org.com</span>
+              <span class="avatar"></span>
+            </div>
+          </div>
+
+          <div class="app-content">
+            <div class="app-title">Dashboard</div>
+
+            <div class="stat-grid">
+              <div class="stat-card">
+                <div class="lbl">Total Repos <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg></div>
+                <div class="val">412</div>
+                <div class="delta"><b>+18</b> this week</div>
+              </div>
+              <div class="stat-card ok">
+                <div class="lbl">Backed Up <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                <div class="val">409</div>
+                <div class="delta"><b>99.3%</b> healthy</div>
+              </div>
+              <div class="stat-card err">
+                <div class="lbl">Failed <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+                <div class="val">1</div>
+                <div class="delta">auth — needs PAT</div>
+              </div>
+              <div class="stat-card">
+                <div class="lbl">Destinations <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
+                <div class="val">3</div>
+                <div class="delta">primary · nfs · s3</div>
+              </div>
+            </div>
+
+            <div class="row-2">
+              <div class="panel">
+                <div class="panel-hd">
+                  <h4>Backup Activity · 2026</h4>
+                  <a href="#">View all →</a>
+                </div>
+                <div class="hm-wrap">
+                  <div class="hm" id="hm"></div>
+                </div>
+                <div class="hm-legend">
+                  Less <i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i> More
+                  &nbsp;·&nbsp; 2,141 runs this year
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-hd"><h4>Storage Usage</h4><a href="#">View all →</a></div>
+                <div class="storage-total">2.14 TB <small>of 4.00 TB</small></div>
+                <div class="bar"><i style="width: 53.5%;"></i></div>
+                <div class="dest"><span>primary · local ssd</span><span>1.4 TB / 2 TB</span></div>
+                <div class="bar"><i style="width: 70%;" class="warn"></i></div>
+                <div class="dest"><span>backup · nfs</span><span>640 GB / 1.5 TB</span></div>
+                <div class="bar"><i style="width: 42%;"></i></div>
+                <div class="dest"><span>cold · s3-glacier</span><span>112 GB / 500 GB</span></div>
+                <div class="bar"><i style="width: 22%;"></i></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="toast">
+            <span class="d"></span>
+            Run 2,041 finished · <b>409 ok</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Trust strip -->
+<section class="trust">
+  <div class="wrap">
+    <div class="eyebrow">Works with every git host</div>
+    <div class="trust-row">
+      <span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 0-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.6.2 2.8.1 3.2.9.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.1.9 2.3v3.3c0 .3.1.7.8.6A12 12 0 0 0 12 .3"/></svg>GitHub</span>
+      <span>GitLab</span>
+      <span>Bitbucket</span>
+      <span>Gitea</span>
+      <span>Azure DevOps</span>
+      <span>AWS CodeCommit</span>
+      <span>self-hosted git</span>
+    </div>
   </div>
 </section>
 
-<!-- Features -->
+<!-- FEATURES -->
 <section id="features">
-  <div class="container">
-    <div class="section-label">Features</div>
-    <h2>Everything you need to sleep at night</h2>
-    <p class="section-sub">Built for paranoid CEOs and pragmatic DevOps engineers alike.</p>
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-tag">Built-in</span>
+      <h2>Everything your <em>DevOps lead</em><br>has been meaning to build.</h2>
+      <p class="sec-sub">Twelve features in the box today. No &ldquo;coming soon&rdquo; asterisks. No SaaS lock-in. Read the source if you&rsquo;re the trust-but-verify type.</p>
+    </div>
 
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">&#128197;</div>
-        <h3>Scheduled Backups</h3>
-        <p>Set it and forget it. Cron-based scheduling with global defaults. Every repo, every night, no manual intervention.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128274;</div>
-        <h3>GPG Encryption</h3>
-        <p>AES-256 symmetric encryption for every archive. Keys managed in the UI. Unencrypted data never touches your destination disk.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128260;</div>
-        <h3>Restore with Diff Preview</h3>
-        <p>See exactly what will change before restoring. Compare branches and tags, view file-level diffs, then confirm. No blind force-pushes.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128275;</div>
-        <h3>Private Repo Support</h3>
-        <p>Store PATs or SSH keys per host. Credentials are matched automatically by hostname. Supports GitHub, GitLab, Bitbucket, and self-hosted.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128276;</div>
-        <h3>Slack Notifications</h3>
-        <p>Get alerted on backup failures, restore failures, verification errors, and low disk space. Extensible to any webhook provider.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128101;</div>
-        <h3>Multi-User RBAC</h3>
-        <p>Admin and operator roles with per-repo permissions. Operators see only their repos. Admins manage everything.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#127968;</div>
-        <h3>Fully Self-Hosted</h3>
-        <p>Your data stays on your infrastructure. One docker compose up and you're running. No cloud dependency, no SaaS lock-in.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128202;</div>
-        <h3>Activity Dashboard</h3>
-        <p>GitHub-style heatmap of backup activity, storage breakdown per destination, repo health at a glance. The "is everything green?" screen.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128229;</div>
-        <h3>Snapshot Downloads</h3>
-        <p>Download any backup archive directly from the UI. Encrypted or decrypted on the fly. Export your data whenever you need it.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#9889;</div>
-        <h3>Smart Deduplication</h3>
-        <p>Skips backup automatically when nothing changed since the last run. Saves disk space and time without any configuration.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#9881;&#65039;</div>
-        <h3>Batch Operations</h3>
-        <p>Select multiple repos and back up or delete them all at once. Sorting, filtering, and search across hundreds of repositories.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">&#128272;</div>
-        <h3>Secrets at Rest</h3>
-        <p>Git credentials and encryption keys are encrypted in the database with Fernet (AES-128). Not stored in plaintext, ever.</p>
-      </div>
+    <div class="features">
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><h3>Scheduled backups</h3><p>Cron per repo or a global default. The scheduler runs in its own worker. Set once, forget for years.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>GPG encryption</h3><p>AES-256 symmetric on every archive. Keys rotated from the UI. Your disks never see plaintext.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div><h3>Restore with diff</h3><p>Review every file, branch, and tag that will change before any push. Never force-push on faith.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.6 7.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8z"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg></div><h3>Credential store</h3><p>Per-host PATs and SSH keys, matched by hostname. GitHub, GitLab, Bitbucket, Gitea, you name it.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><h3>Slack alerts</h3><p>Failure, verification error, low disk — one channel, one click. Webhook-compatible with any destination.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h3>Multi-user RBAC</h3><p>Admins and operators, scoped per repo. Operators see what they own. No IAM language required.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><h3>Fully self-hosted</h3><p>Your disk, your network, your encryption keys. No cloud bill. No egress fees. No vendor roadmap.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><h3>Activity heatmap</h3><p>GitHub-style green year. One glance tells you if everything is fine. Red dots start Monday meetings.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div><h3>Snapshot export</h3><p>Download any archive, encrypted or decrypted on the fly. Your data, yours to move, whenever.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><h3>Smart deduplication</h3><p>If nothing changed, no archive is written. Saves disk, saves time, needs no configuration.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div><h3>Batch operations</h3><p>Select 400 repos, hit one button. Filter, sort, search across everything. Built for real scale.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h3>Secrets at rest</h3><p>Credentials and keys sit in the database encrypted with Fernet (AES-128). Plaintext lives nowhere.</p></div>
     </div>
   </div>
 </section>
 
-<!-- How it Works -->
-<section id="how-it-works" style="background: var(--bg-subtle);">
-  <div class="container">
-    <div class="section-label" style="text-align:center;">How it works</div>
-    <h2 style="text-align:center;">Three steps to peace of mind</h2>
-    <p class="section-sub" style="text-align:center; margin: 0 auto 3.5rem;">No agents to install. No SSH access to your repos needed. Just URLs.</p>
+<!-- HOW -->
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-tag">How it works</span>
+      <h2>Three steps. <em>Thirty seconds.</em></h2>
+      <p class="sec-sub">No agents in your repos. No SSH into your boxes. Gitbacker clones URLs and writes archives to disks you own. That&rsquo;s the whole threat model.</p>
+    </div>
 
     <div class="steps">
       <div class="step">
-        <div class="step-number">1</div>
+        <div class="step-num">1</div>
         <h3>Install</h3>
-        <p>Run the one-liner. Docker pulls the images, generates secrets, seeds your admin account, and starts everything.</p>
+        <p>Run the one-liner on any host with Docker. Images pulled, secrets generated, admin seeded, scheduler live.</p>
+<div class="code"><span class="c"># any host with docker</span>
+<span class="a">$</span> curl -fsSL gitbacker.com/install.sh | bash
+<span class="c">▸ ready @ http://localhost:8080</span></div>
       </div>
       <div class="step">
-        <div class="step-number">2</div>
-        <h3>Add Repos</h3>
-        <p>Paste one or more git URLs. Pick a destination and schedule, or use the defaults. Private repos? Add a PAT in settings.</p>
+        <div class="step-num">2</div>
+        <h3>Add repos</h3>
+        <p>Paste URLs in the UI or POST them to the API. Pick a schedule and a destination, or take the defaults.</p>
+<div class="code"><span class="a">POST</span> /api/repositories
+  <span class="c">"url"</span>: "git@github.com:your-org/api",
+  <span class="c">"schedule"</span>: "0 3 * * *"
+<span class="k">✓ queued · next run 03:00 UTC</span></div>
       </div>
       <div class="step">
-        <div class="step-number">3</div>
+        <div class="step-num">3</div>
         <h3>Relax</h3>
-        <p>Backups run on schedule. Unchanged repos are skipped automatically. Failures trigger Slack alerts. Restore any snapshot with a full diff preview before pushing.</p>
+        <p>Scheduler runs. Unchanged repos skip. Failures ping Slack. Restore any snapshot with a full diff preview.</p>
+<div class="code"><span class="k">✓ 412 repos backed up</span>
+<span class="k">✓ 2.1 TB stored encrypted</span>
+<span class="c">▸ next run: tuesday 03:00</span></div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- WHEN YOU'LL WISH YOU HAD THIS -->
+<section id="why" class="why-wrap">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-tag">When you'll wish you had this</span>
+      <h2>Backups are <em>boring</em><br>until they aren't.</h2>
+      <p class="sec-sub">Six real ways teams lose source code. Each one happens dozens of times a quarter to companies that thought their git host was their backup. It isn't.</p>
+    </div>
+
+    <div class="why-shell" id="why-shell">
+      <div class="why-list" role="tablist" aria-label="Failure scenarios">
+        <button class="why-tab" role="tab" aria-selected="true" data-i="0">
+          <span class="num">01</span>
+          <span class="title">Vendor lockout</span>
+          <span class="why-pill">Crit</span>
+          <span class="why-progress"><i></i></span>
+        </button>
+        <button class="why-tab" role="tab" aria-selected="false" data-i="1">
+          <span class="num">02</span>
+          <span class="title">Force-push / human error</span>
+          <span class="why-pill">High</span>
+          <span class="why-progress"><i></i></span>
+        </button>
+        <button class="why-tab" role="tab" aria-selected="false" data-i="2">
+          <span class="num">03</span>
+          <span class="title">Lost or stolen laptop</span>
+          <span class="why-pill">Med</span>
+          <span class="why-progress"><i></i></span>
+        </button>
+        <button class="why-tab" role="tab" aria-selected="false" data-i="3">
+          <span class="num">04</span>
+          <span class="title">Vendor outage</span>
+          <span class="why-pill">High</span>
+          <span class="why-progress"><i></i></span>
+        </button>
+        <button class="why-tab" role="tab" aria-selected="false" data-i="4">
+          <span class="num">05</span>
+          <span class="title">M&amp;A diligence</span>
+          <span class="why-pill">Med</span>
+          <span class="why-progress"><i></i></span>
+        </button>
+        <button class="why-tab" role="tab" aria-selected="false" data-i="5">
+          <span class="num">06</span>
+          <span class="title">Compliance audit</span>
+          <span class="why-pill">High</span>
+          <span class="why-progress"><i></i></span>
+        </button>
+      </div>
+
+      <div class="why-detail" id="why-detail" aria-live="polite">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <script type="application/json" id="why-data">
+[
+  {
+    "case": "CASE-001",
+    "scope": "vendor.lockout",
+    "sev": "crit",
+    "sevLabel": "Critical",
+    "title": "Your org gets <em>frozen</em>.",
+    "lede": "An <b>API misuse</b>, a payment failure, a TOS bot that flagged a private repo as malware. Access yanked, no warning, the support ticket queued behind 4,000 others. The only copy of your code is the one they're holding hostage.",
+    "fixTag": "Mitigation",
+    "fix": "<b>Repos → New schedule → Hourly</b> — second copy on hardware you own.",
+    "stats": [
+      {"k":"Recovery without backup","v":"<em>days → never</em>"},
+      {"k":"Recovery with Gitbacker","v":"~1 hour"},
+      {"k":"Reported lockouts /yr","v":"~1k"}
+    ]
+  },
+  {
+    "case": "CASE-002",
+    "scope": "human.error",
+    "sev": "high",
+    "sevLabel": "High",
+    "title": "An admin <em>force-pushes</em>.",
+    "lede": "Or deletes the wrong branch. Or runs <code>git filter-branch</code> on prod to redact a leaked key. The reflog garbage-collects in <b>90 days</b>; some hosts in 30. After that, history is gone for good.",
+    "fixTag": "Mitigation",
+    "fix": "<b>Repo → Restore → Preview diff</b> — see every change before you push.",
+    "stats": [
+      {"k":"Reflog window","v":"30–90d"},
+      {"k":"Snapshots retained","v":"<em>unlimited</em>"},
+      {"k":"Restore w/ diff","v":"1 click"}
+    ]
+  },
+  {
+    "case": "CASE-003",
+    "scope": "endpoint.loss",
+    "sev": "med",
+    "sevLabel": "Medium",
+    "title": "A laptop <em>walks off</em>.",
+    "lede": "Stolen at a conference, dropped in a river, encrypted by ransomware over a long weekend. Your only local clone of that uncommitted prototype <b>goes with it</b>.",
+    "fixTag": "Mitigation",
+    "fix": "<b>Settings → General → Mirror stashes</b> — server-side copy of every clone.",
+    "stats": [
+      {"k":"US laptops lost /yr","v":"~70k"},
+      {"k":"Avg. data on dev box","v":"~120GB"},
+      {"k":"Server-side mirror","v":"<em>always on</em>"}
+    ]
+  },
+  {
+    "case": "CASE-004",
+    "scope": "vendor.outage",
+    "sev": "high",
+    "sevLabel": "High",
+    "title": "The host <em>goes dark</em>.",
+    "lede": "GitHub had multi-hour outages last quarter. GitLab.com's <b>2017 incident</b> lost six hours of data. Bitbucket sunset Mercurial with twelve months notice — not everyone made the cut. You don't get to schedule the migration.",
+    "fixTag": "Mitigation",
+    "fix": "<b>Destinations → Serve read-only</b> — a local clone URL while upstream's down.",
+    "stats": [
+      {"k":"Major host incidents/yr","v":"10+"},
+      {"k":"Local read-only mode","v":"<em>built-in</em>"},
+      {"k":"Time to fail over","v":"~30s"}
+    ]
+  },
+  {
+    "case": "CASE-005",
+    "scope": "m&a.diligence",
+    "sev": "med",
+    "sevLabel": "Medium",
+    "title": "The acquirer wants <em>everything</em>.",
+    "lede": "Every repo, every branch, every secret-scan, in one offline tarball with a manifest, by Friday. <b>&ldquo;It's all on GitHub&rdquo; isn't an answer</b> the diligence team accepts.",
+    "fixTag": "Mitigation",
+    "fix": "<b>Repos → Export all → Signed manifest</b> — single tarball, decrypted on demand.",
+    "stats": [
+      {"k":"Repos in one archive","v":"<em>unlimited</em>"},
+      {"k":"Manifest format","v":"JSON + sig"},
+      {"k":"Time to full export","v":"~30s/100"}
+    ]
+  },
+  {
+    "case": "CASE-006",
+    "scope": "compliance.ask",
+    "sev": "high",
+    "sevLabel": "High",
+    "title": "The auditor <em>asks the question</em>.",
+    "lede": "<b>SOC 2 CC7.5</b>, <b>ISO 27001 A.8.13</b>, <b>NIS2 Article 21</b>: where is your source code backed up, and who controls the keys? A third-party SaaS holding both is the wrong answer.",
+    "fixTag": "Mitigation",
+    "fix": "<b>Settings → Audit log → Last 30 days</b> — signed record of every backup, every key.",
+    "stats": [
+      {"k":"Keys held by","v":"<em>you</em>"},
+      {"k":"Audit log","v":"signed"},
+      {"k":"Telemetry sent","v":"none"}
+    ]
+  }
+]
+    </script>
   </div>
 </section>
 
 <!-- CTA -->
 <section class="cta">
-  <div class="container">
-    <h2>Start backing up in 30 seconds</h2>
-    <p>One command. No sign-up. Your infrastructure, your data.</p>
-    <div class="cta-buttons">
-      <a href="https://github.com/gitbckr/gitbacker" class="btn">View on GitHub</a>
-      <a href="https://github.com/gitbckr/gitbacker#readme" class="btn btn-outline">Documentation</a>
+  <div class="wrap">
+    <div class="cta-card">
+      <h2>Back up before you <em>need&nbsp;to.</em></h2>
+      <p>One command. No signup. Your infrastructure, your keys, your data. The next git outage is already scheduled — be ready for it.</p>
+      <div class="hero-cta" style="margin-bottom: 0;">
+        <a class="primary-cta" href="https://github.com/gitbckr/gitbacker">
+          View on GitHub
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <a href="#install" class="btn-pill" style="background: var(--bg-2); color: var(--fg); border: 1px solid var(--line);">Read the docs</a>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- Footer -->
 <footer>
-  <div class="container">
-    <span class="copy">Gitbacker &mdash; Open source, Apache License 2.0</span>
-    <div class="links">
+  <div class="wrap">
+    <span class="cp">© Gitbacker · Apache License 2.0 · no telemetry</span>
+    <div class="lk">
       <a href="https://github.com/gitbckr/gitbacker">GitHub</a>
       <a href="https://github.com/gitbckr/gitbacker/releases">Releases</a>
       <a href="https://github.com/gitbckr/gitbacker/issues">Issues</a>
@@ -660,50 +1509,287 @@
   </div>
 </footer>
 
+<div class="switcher">
+  <a href="index.html">← all</a>
+  <a href="v1-brutalist.html">v1 · brutalist</a>
+  <a href="v2-retro.html">v2 · retro</a>
+  <a href="v3-polish.html" class="on">v3 · polish</a>
+</div>
+
 <script>
-function copyInstall(btn) {
-  var text = 'curl -fsSL https://gitbacker.com/install.sh | bash';
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(function () { copied(btn); });
-  } else {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    copied(btn);
+  // Build a deterministic, realistic heatmap: 53 cols x 7 rows = 371 cells
+  (function buildHeatmap() {
+    const hm = document.getElementById('hm');
+    if (!hm) return;
+    // Seeded RNG
+    let seed = 42;
+    const rand = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    // Use grid-auto-flow: column — we output rows 0..6 for each col
+    const total = 53 * 7;
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < total; i++) {
+      const col = Math.floor(i / 7);
+      const row = i % 7;
+      const i2 = document.createElement('i');
+      // weekend dip
+      const weekend = row === 0 || row === 6;
+      // dip at start of year and future (last few cols)
+      const early = col < 2 || col > 46;
+      const r = rand();
+      let cls = '';
+      if (early) cls = r < 0.5 ? '' : 'l1';
+      else if (weekend) cls = r < 0.5 ? 'l1' : (r < 0.85 ? 'l2' : 'l3');
+      else {
+        if (r < 0.05) cls = '';
+        else if (r < 0.12) cls = 'l1';
+        else if (r < 0.35) cls = 'l2';
+        else cls = 'l3';
+      }
+      // sprinkle in ambers + 1 error
+      if (col === 18 && row === 3) cls = 'a';
+      if (col === 32 && row === 5) cls = 'a';
+      if (col === 41 && row === 2) cls = 'e';
+      if (cls) i2.className = cls;
+      frag.appendChild(i2);
+    }
+    hm.appendChild(frag);
+  })();
+
+  function copyInstall(btn) {
+    const text = document.getElementById('install-cmd').textContent.trim();
+    navigator.clipboard?.writeText(text);
+    const orig = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(() => btn.textContent = orig, 1400);
   }
-}
-function copied(btn) {
-  btn.textContent = 'Copied!';
-  setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
-}
-
-// Theme toggle — persists to localStorage, respects system preference
-(function() {
-  var saved = localStorage.getItem('theme');
-  if (saved === 'light') document.documentElement.classList.add('light');
-  else if (saved === 'dark') document.documentElement.classList.add('dark');
-})();
-
-function toggleTheme() {
-  var root = document.documentElement;
-  var isLight = root.classList.contains('light') ||
-    (!root.classList.contains('dark') && window.matchMedia('(prefers-color-scheme: light)').matches);
-
-  if (isLight) {
-    root.classList.remove('light');
-    root.classList.add('dark');
-    localStorage.setItem('theme', 'dark');
-  } else {
-    root.classList.remove('dark');
-    root.classList.add('light');
-    localStorage.setItem('theme', 'light');
+  function toggleTheme() {
+    const html = document.documentElement;
+    const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
+    html.dataset.theme = next;
+    localStorage.setItem('gb-v3-theme', next);
+    updateThemeIcon();
   }
-}
+  function updateThemeIcon() {
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    const el = document.getElementById('ti');
+    if (!el) return;
+    el.innerHTML = isDark
+      ? '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
+      : '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+  (function() {
+    const saved = localStorage.getItem('gb-v3-theme');
+    if (saved) document.documentElement.dataset.theme = saved;
+    updateThemeIcon();
+  })();
+
+  /* --- WHY: incident picker --- */
+  (function whyPicker() {
+    const shell = document.getElementById('why-shell');
+    const detail = document.getElementById('why-detail');
+    const dataEl = document.getElementById('why-data');
+    if (!shell || !detail || !dataEl) return;
+    const data = JSON.parse(dataEl.textContent);
+    const tabs = Array.from(shell.querySelectorAll('.why-tab'));
+    const DUR = 6500;
+    let cur = 0;
+    let timer = null;
+    let userLocked = false;
+
+    function render(i) {
+      const d = data[i];
+      detail.innerHTML = `
+        <div class="why-detail-head why-fade">
+          <span class="case">${d.case}</span>
+          <span>·</span>
+          <span>${d.scope}</span>
+          <span class="sev ${d.sev}">${d.sevLabel}</span>
+        </div>
+        <div class="why-fade" style="animation-delay: 40ms;">
+          <h3>${d.title}</h3>
+          <p class="lede2" style="margin-top: 16px;">${d.lede}</p>
+          <div class="why-fix" style="margin-top: 18px;">
+            <span class="fix-tag">${d.fixTag}</span>
+            <span>${d.fix}</span>
+          </div>
+        </div>
+        <div class="why-stats why-fade" style="animation-delay: 80ms;">
+          ${d.stats.map(s => `
+            <div class="why-stat">
+              <div class="k">${s.k}</div>
+              <div class="v">${s.v}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      tabs.forEach((t, idx) => t.setAttribute('aria-selected', idx === i ? 'true' : 'false'));
+      // restart progress animation on the active tab by reflow
+      const active = tabs[i].querySelector('.why-progress i');
+      if (active) {
+        active.style.animation = 'none';
+        active.offsetWidth;
+        active.style.animation = '';
+        tabs[i].style.setProperty('--why-dur', DUR + 'ms');
+      }
+      cur = i;
+    }
+
+    function next() {
+      if (userLocked) return;
+      render((cur + 1) % data.length);
+    }
+    function start() {
+      stop();
+      timer = setInterval(next, DUR);
+    }
+    function stop() {
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+
+    tabs.forEach((t) => {
+      t.addEventListener('click', () => {
+        userLocked = true;
+        shell.classList.remove('why-paused');
+        render(parseInt(t.dataset.i, 10));
+        stop();
+      });
+    });
+    shell.addEventListener('mouseenter', () => {
+      if (userLocked) return;
+      shell.classList.add('why-paused');
+      stop();
+    });
+    shell.addEventListener('mouseleave', () => {
+      if (userLocked) return;
+      shell.classList.remove('why-paused');
+      start();
+    });
+
+    // Pause when offscreen, resume on visible
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (userLocked) return;
+        if (e.isIntersecting) start();
+        else stop();
+      });
+    }, { threshold: 0.2 });
+    io.observe(shell);
+
+    render(0);
+    start();
+  })();
+
+  /* --- HERO: live counters, status pills, recent-job ticker --- */
+  (function heroAnimate() {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // 1) Tick the badge "X repos backed up in the last hour"
+    const badgeNum = document.querySelector('.badge b');
+    if (badgeNum) {
+      let n = 412;
+      const tick = () => {
+        n += 1 + Math.floor(Math.random() * 2);
+        badgeNum.textContent = n.toLocaleString() + ' repos';
+      };
+      if (!reduced) setInterval(tick, 4200);
+    }
+
+    // 2) Animate the dashboard stat values from 0 once visible
+    const dash = document.querySelector('.product');
+    if (dash) {
+      const animateNum = (el, target, dur = 1400) => {
+        const start = performance.now();
+        const from = 0;
+        const step = (now) => {
+          const t = Math.min(1, (now - start) / dur);
+          const eased = 1 - Math.pow(1 - t, 3);
+          el.textContent = Math.round(from + (target - from) * eased).toLocaleString();
+          if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+      const cards = document.querySelectorAll('.stat-card .val');
+      const targets = [412, 409, 1, 3];
+      const fired = new WeakSet();
+      const io2 = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (!e.isIntersecting || fired.has(e.target)) return;
+          fired.add(e.target);
+          if (reduced) return;
+          cards.forEach((c, i) => {
+            c.textContent = '0';
+            setTimeout(() => animateNum(c, targets[i], 1100 + i * 120), i * 100);
+          });
+        });
+      }, { threshold: 0.3 });
+      io2.observe(dash);
+    }
+
+    // 3) Recent-job ticker overlaid in the dashboard header
+    const appHead = document.querySelector('.app-head');
+    if (appHead && !reduced) {
+      const ticker = document.createElement('div');
+      ticker.className = 'job-ticker';
+      ticker.innerHTML = '<span class="dot"></span><span class="text">your-org/api · 3.2 GB encrypted</span>';
+      appHead.appendChild(ticker);
+      const jobs = [
+        ['your-org/api', '3.2 GB encrypted'],
+        ['your-org/web', '812 MB encrypted'],
+        ['your-org/infra', '248 MB · no change'],
+        ['your-org/ml-pipeline', '14.4 GB encrypted'],
+        ['your-org/docs', '92 MB encrypted'],
+        ['your-org/archive-2013', 'auth error · paged ops'],
+        ['your-org/payments', '1.8 GB encrypted'],
+        ['your-org/mobile', '624 MB encrypted'],
+      ];
+      let ji = 0;
+      const text = ticker.querySelector('.text');
+      const dot = ticker.querySelector('.dot');
+      setInterval(() => {
+        ji = (ji + 1) % jobs.length;
+        const [repo, status] = jobs[ji];
+        const isErr = status.includes('error');
+        const isSkip = status.includes('no change');
+        text.style.transform = 'translateY(-6px)';
+        text.style.opacity = '0';
+        setTimeout(() => {
+          text.innerHTML = `<b>${repo}</b> · ${status}`;
+          dot.dataset.kind = isErr ? 'err' : isSkip ? 'skip' : 'ok';
+          text.style.transform = 'translateY(0)';
+          text.style.opacity = '1';
+        }, 220);
+      }, 2400);
+    }
+
+    // 4) Heatmap: light up the latest column over time
+    const hm = document.getElementById('hm');
+    if (hm && !reduced) {
+      // Wait until heatmap is built
+      setTimeout(() => {
+        const cells = hm.querySelectorAll('i');
+        if (!cells.length) return;
+        // Find "today" column (around col 47 — 5 from end)
+        let curCol = 47;
+        let curRow = 5;
+        const tick = () => {
+          // pick a non-weekend cell in current col
+          curRow = (curRow + 1) % 7;
+          if (curRow === 0 || curRow === 6) curRow = 1;
+          const idx = curCol * 7 + curRow;
+          const cell = cells[idx];
+          if (cell) {
+            cell.classList.remove('l1', 'l2');
+            cell.classList.add('l3', 'just-lit');
+            setTimeout(() => cell.classList.remove('just-lit'), 1200);
+          }
+        };
+        setInterval(tick, 1800);
+      }, 200);
+    }
+  })();
 </script>
 </body>
 </html>

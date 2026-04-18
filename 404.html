@@ -1,32 +1,620 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>404 — Gitbacker</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #09090b;
-      color: #fafafa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      text-align: center;
-    }
-    h1 { font-size: 4rem; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 0.5rem; }
-    p { color: #a1a1aa; margin-bottom: 2rem; }
-    a { color: #3b82f6; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 — this commit doesn't exist · Gitbacker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: oklch(0.16 0.012 220);
+    --bg-1: oklch(0.195 0.014 220);
+    --bg-2: oklch(0.22 0.014 220);
+    --bg-3: oklch(0.26 0.016 220);
+    --fg: oklch(0.985 0.005 220);
+    --fg-muted: oklch(0.74 0.015 220);
+    --fg-dim: oklch(0.55 0.015 220);
+    --line: oklch(0.30 0.014 220);
+    --line-soft: oklch(0.24 0.012 220);
+    --accent: oklch(0.82 0.14 165);
+    --accent-ink: oklch(0.22 0.05 165);
+    --ok: oklch(0.78 0.16 150);
+    --warn: oklch(0.82 0.17 80);
+    --err: oklch(0.70 0.22 25);
+    --glass: color-mix(in oklch, var(--bg-1) 70%, transparent);
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+    --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+
+  /* Ambient glow */
+  .glow-bg {
+    position: absolute; inset: -20% -10% auto -10%;
+    height: 820px;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(55% 55% at 28% 28%, color-mix(in oklch, var(--accent) 22%, transparent) 0%, transparent 60%),
+      radial-gradient(45% 45% at 78% 42%, color-mix(in oklch, oklch(0.68 0.18 260) 20%, transparent) 0%, transparent 55%),
+      radial-gradient(40% 40% at 55% 80%, color-mix(in oklch, var(--err) 12%, transparent) 0%, transparent 55%);
+    filter: blur(44px);
+    opacity: 0.9;
+  }
+
+  /* Commit-node particle canvas */
+  #particles {
+    position: fixed; inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* --- Nav --- */
+  nav { position: sticky; top: 12px; z-index: 50; padding: 12px 28px 0; }
+  .nav-shell {
+    max-width: 1140px; margin: 0 auto;
+    background: var(--glass);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 8px 10px 8px 18px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow:
+      0 1px 0 color-mix(in oklch, var(--fg) 6%, transparent) inset,
+      0 20px 40px -20px rgba(0,0,0,0.45);
+  }
+  .brand {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-weight: 700; font-size: 15px;
+    color: var(--fg); text-decoration: none;
+    letter-spacing: -0.02em;
+  }
+  .brand svg { width: 22px; height: 22px; color: var(--accent); }
+  .brand .ver {
+    font-family: var(--font-mono);
+    font-size: 10.5px; font-weight: 500;
+    color: var(--fg-dim);
+    padding: 2px 7px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    margin-left: 2px;
+  }
+  .nav-status {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+    padding: 7px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .nav-status .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--err);
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--err) 60%, transparent);
+    animation: pulse-err 1.8s infinite;
+  }
+  @keyframes pulse-err {
+    0%   { box-shadow: 0 0 0 0 color-mix(in oklch, var(--err) 60%, transparent); }
+    70%  { box-shadow: 0 0 0 10px color-mix(in oklch, var(--err) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--err) 0%, transparent); }
+  }
+
+  /* --- Main --- */
+  main {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 64px;
+    align-items: center;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 48px 28px 40px;
+  }
+
+  /* Left: big 404 + copy */
+  .headline {
+    position: relative;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--fg-muted);
+    padding: 5px 12px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    background: var(--bg-2);
+    margin-bottom: 22px;
+  }
+  .eyebrow .x { color: var(--err); font-weight: 700; }
+  .big {
+    position: relative;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: clamp(140px, 18vw, 240px);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    margin-bottom: 10px;
+    user-select: none;
+  }
+  .big .digit {
+    display: inline-block;
+    transform-origin: 50% 60%;
+    background: linear-gradient(180deg,
+      color-mix(in oklch, var(--fg) 90%, transparent) 0%,
+      color-mix(in oklch, var(--fg-dim) 85%, transparent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .big .digit.d1 { animation: drift 7s ease-in-out infinite; }
+  .big .digit.d2 {
+    animation: drift 5.5s ease-in-out infinite 0.5s;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: var(--accent);
+  }
+  .big .digit.d3 { animation: drift 6.3s ease-in-out infinite 1s; }
+  @keyframes drift {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-8px) rotate(-1.5deg); }
+  }
+  .big .d2 {
+    position: relative;
+  }
+  .big .d2::after {
+    content: "";
+    position: absolute;
+    left: 10%; right: 10%;
+    top: 55%;
+    height: 3px;
+    background: var(--err);
+    border-radius: 3px;
+    transform: rotate(-8deg) scaleX(0);
+    transform-origin: left;
+    animation: strike 2.4s cubic-bezier(.2,.7,.2,1) 0.6s forwards;
+  }
+  @keyframes strike {
+    0%   { transform: rotate(-8deg) scaleX(0); }
+    60%  { transform: rotate(-8deg) scaleX(1.05); }
+    100% { transform: rotate(-8deg) scaleX(1); }
+  }
+
+  h1 {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    margin: 18px 0 14px;
+    text-wrap: balance;
+  }
+  h1 em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+  .lede {
+    color: var(--fg-muted);
+    font-size: 15.5px;
+    max-width: 490px;
+    text-wrap: pretty;
+    margin-bottom: 28px;
+  }
+  .lede code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 1px 6px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    color: var(--fg);
+  }
+
+  .actions {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 18px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    transition: transform 0.15s, background 0.2s, border-color 0.2s;
+    cursor: pointer;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    box-shadow: 0 10px 24px -12px color-mix(in oklch, var(--accent) 60%, transparent);
+  }
+  .btn-primary:hover { background: color-mix(in oklch, var(--accent) 90%, white); }
+  .btn-ghost {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+  .btn-ghost:hover { background: var(--bg-3); border-color: var(--fg-dim); }
+  .btn svg { width: 15px; height: 15px; }
+
+  /* Right: terminal window */
+  .term-wrap {
+    position: relative;
+  }
+  .term {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+      0 1px 0 color-mix(in oklch, var(--fg) 5%, transparent) inset,
+      0 40px 80px -40px rgba(0,0,0,0.7),
+      0 20px 40px -30px color-mix(in oklch, var(--accent) 30%, transparent);
+    font-family: var(--font-mono);
+    position: relative;
+  }
+  .term-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    background: color-mix(in oklch, var(--bg-1) 80%, var(--bg-2));
+  }
+  .term-head .tl { display: flex; gap: 6px; }
+  .term-head .tl i {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--bg-3);
+  }
+  .term-head .tl i:nth-child(1) { background: oklch(0.65 0.16 25); }
+  .term-head .tl i:nth-child(2) { background: oklch(0.80 0.14 85); }
+  .term-head .tl i:nth-child(3) { background: oklch(0.72 0.14 150); }
+  .term-head .path {
+    font-size: 11.5px; color: var(--fg-dim);
+    margin-left: 8px;
+  }
+  .term-body {
+    padding: 18px 20px 20px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--fg-muted);
+    min-height: 300px;
+  }
+  .line { display: block; white-space: pre-wrap; word-break: break-all; }
+  .line .p { color: var(--accent); font-weight: 600; }
+  .line .c { color: var(--fg-dim); }
+  .line .ok { color: var(--ok); }
+  .line .er { color: var(--err); }
+  .line .wn { color: var(--warn); }
+  .line .q  { color: var(--fg); }
+  .line b   { color: var(--fg); font-weight: 500; }
+
+  .cursor {
+    display: inline-block;
+    width: 8px; height: 15px;
+    background: var(--fg);
+    vertical-align: -2px;
+    animation: blink 1s steps(2, end) infinite;
+    margin-left: 2px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Shield sweep animation (appears at end) */
+  .shield {
+    position: absolute;
+    right: -14px; top: -14px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center;
+    transform: scale(0) rotate(-45deg);
+    opacity: 0;
+    box-shadow: 0 8px 24px -8px color-mix(in oklch, var(--accent) 60%, transparent);
+    z-index: 3;
+  }
+  .shield svg { width: 24px; height: 24px; }
+  .shield.in { animation: shield-in 0.6s cubic-bezier(.2,1.4,.4,1) forwards; }
+  @keyframes shield-in {
+    0%   { transform: scale(0) rotate(-45deg); opacity: 0; }
+    70%  { transform: scale(1.15) rotate(0deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .shield::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    opacity: 0;
+    animation: shield-ring 1.8s ease-out infinite 0.8s;
+  }
+  @keyframes shield-ring {
+    0%   { transform: scale(0.8); opacity: 0.7; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  /* Footer */
+  footer {
+    position: relative; z-index: 2;
+    padding: 18px 28px 22px;
+    border-top: 1px solid var(--line-soft);
+    background: color-mix(in oklch, var(--bg) 70%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .footer-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-dim);
+  }
+  .footer-inner a { color: var(--fg-muted); text-decoration: none; }
+  .footer-inner a:hover { color: var(--fg); }
+  .footer-inner .sep { color: var(--line); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; gap: 32px; padding-top: 28px; }
+    .big { font-size: clamp(110px, 30vw, 180px); }
+    .term-body { min-height: 260px; font-size: 12.5px; }
+  }
+</style>
 </head>
 <body>
-  <div>
-    <h1>404</h1>
-    <p>This page doesn't exist.</p>
-    <a href="/">Back to Gitbacker</a>
-  </div>
+  <div class="glow-bg"></div>
+  <canvas id="particles"></canvas>
+
+  <nav>
+    <div class="nav-shell">
+      <a href="/" class="brand">
+        <svg viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="12" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M42 52 L158 52 L158 114 Q158 158 100 178 Q42 158 42 114 L42 52 Z"/>
+          <line x1="100" y1="82" x2="100" y2="138"/>
+          <line x1="100" y1="108" x2="128" y2="92"/>
+        </svg>
+        Gitbacker
+        <span class="ver">v0.5</span>
+      </a>
+      <span class="nav-status" aria-live="polite">
+        <span class="dot"></span>
+        <span>HTTP 404 · ref not found</span>
+      </span>
+    </div>
+  </nav>
+
+  <main>
+    <section class="headline">
+      <span class="eyebrow"><span class="x">✗</span> fatal: pathspec did not match any files known to git</span>
+      <div class="big" aria-label="404">
+        <span class="digit d1">4</span><span class="digit d2">0</span><span class="digit d3">4</span>
+      </div>
+      <h1>This page was <em>garbage-collected</em> — or never committed in the first place.</h1>
+      <p class="lede">
+        The URL points to a ref we can't resolve. The good news: if we'd been backing it up, you could <code>restore</code> it. The better news: we have.
+      </p>
+      <div class="actions">
+        <a href="/" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 L12 3 L21 12"/><path d="M5 10 V21 H19 V10"/></svg>
+          Restore home
+        </a>
+        <a href="/#features" class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 9 V12 a3 3 0 0 0 3 3 h3"/><path d="M15 12 H18"/></svg>
+          Back up something real
+        </a>
+      </div>
+    </section>
+
+    <section class="term-wrap">
+      <div class="shield" id="shield" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2 L4 5 V12 C4 17 7.5 20.5 12 22 C16.5 20.5 20 17 20 12 V5 Z"/>
+          <path d="M9 12 L11 14 L15 10"/>
+        </svg>
+      </div>
+      <div class="term" role="log" aria-live="polite">
+        <div class="term-head">
+          <div class="tl"><i></i><i></i><i></i></div>
+          <div class="path">~/gitbacker · recovery shell</div>
+        </div>
+        <div class="term-body" id="term"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span>Error logged · request ID <b style="color:var(--fg-muted)">gb-<span id="reqid">0000-0000</span></b></span>
+      <span>
+        <a href="/">Home</a>
+        <span class="sep">·</span>
+        <a href="https://github.com/gitbckr/gitbacker">Source</a>
+        <span class="sep">·</span>
+        <a href="/#docs">Docs</a>
+      </span>
+    </div>
+  </footer>
+
+<script>
+  // --- Request ID ---
+  const hex = () => Math.random().toString(16).slice(2, 6);
+  document.getElementById('reqid').textContent = hex() + '-' + hex();
+
+  // --- Terminal typewriter ---
+  const term = document.getElementById('term');
+  const shield = document.getElementById('shield');
+  const path = typeof window !== 'undefined' && window.location
+    ? (window.location.pathname || '/unknown').slice(0, 48)
+    : '/unknown';
+
+  const script = [
+    { t: "$ git fetch origin <b>" + escapeHtml(path) + "</b>", cls: "q", delay: 60 },
+    { t: "  resolving deltas...", cls: "c", delay: 500 },
+    { t: "  <span class='er'>fatal: couldn't find remote ref " + escapeHtml(path) + "</span>", cls: "", delay: 400 },
+    { t: "", delay: 250 },
+    { t: "<span class='p'>gitbacker</span> <span class='c'>// checking local mirrors</span>", cls: "", delay: 300 },
+    { t: "  <span class='wn'>⟳</span> scanning 3 destinations...", cls: "c", delay: 600 },
+    { t: "  <span class='ok'>✓</span> found snapshot on <b>local-nvme</b>", cls: "c", delay: 500 },
+    { t: "  <span class='ok'>✓</span> found snapshot on <b>s3-eu-west-1</b>", cls: "c", delay: 350 },
+    { t: "  <span class='ok'>✓</span> manifest verified · GPG sig ok", cls: "c", delay: 400 },
+    { t: "", delay: 250 },
+    { t: "<span class='p'>gitbacker</span> <b>offering recovery:</b>", cls: "", delay: 200 },
+    { t: "  → <a href='/' style='color:var(--accent);text-decoration:none;border-bottom:1px dashed var(--accent)'>restore from last backup</a>", cls: "", delay: 250 },
+    { t: "", delay: 200 },
+    { t: "<span class='c'># even dead URLs have a second copy.</span>", cls: "", delay: 0 },
+  ];
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  let cursor = null;
+  function ensureCursor() {
+    if (cursor && cursor.parentNode) cursor.remove();
+    cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    term.appendChild(cursor);
+  }
+
+  async function typeLine(entry) {
+    const line = document.createElement('span');
+    line.className = 'line';
+    term.appendChild(line);
+    // Simple: set innerHTML at once but with a short "typing" feel via delay
+    if (entry.t === "") {
+      line.innerHTML = '&nbsp;';
+    } else {
+      line.innerHTML = entry.t;
+    }
+    ensureCursor();
+    await wait(entry.delay ?? 200);
+  }
+
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function run() {
+    ensureCursor();
+    for (const entry of script) {
+      await typeLine(entry);
+    }
+    // Reveal shield
+    shield.classList.add('in');
+    // Remove cursor after final line
+    await wait(400);
+    if (cursor) cursor.remove();
+  }
+
+  // Slight initial pause so the strike-through animation lands first
+  setTimeout(run, 900);
+
+  // --- Particle canvas: floating commit nodes that drift toward the shield ---
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let w, h, particles = [];
+  function resize() {
+    w = canvas.width = window.innerWidth * devicePixelRatio;
+    h = canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(1, 1);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function mkParticle() {
+    return {
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: (Math.random() * 1.8 + 0.6) * devicePixelRatio,
+      vx: (Math.random() - 0.5) * 0.15 * devicePixelRatio,
+      vy: (Math.random() * -0.25 - 0.05) * devicePixelRatio,
+      alpha: Math.random() * 0.6 + 0.2,
+      hue: Math.random() < 0.18 ? 'accent' : 'dim',
+      life: Math.random() * 400 + 200,
+    };
+  }
+  for (let i = 0; i < 70; i++) particles.push(mkParticle());
+
+  function frame() {
+    ctx.clearRect(0, 0, w, h);
+    // Connecting lines between nearby particles (git graph feel)
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d2 = dx * dx + dy * dy;
+        const maxD = 120 * devicePixelRatio;
+        if (d2 < maxD * maxD) {
+          const op = (1 - Math.sqrt(d2) / maxD) * 0.12;
+          ctx.strokeStyle = `rgba(180, 230, 210, ${op})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    // Dots
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 1;
+      if (p.y < -10 || p.life <= 0 || p.x < -10 || p.x > w + 10) {
+        p.x = Math.random() * w;
+        p.y = h + 10;
+        p.life = Math.random() * 400 + 200;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      if (p.hue === 'accent') {
+        ctx.fillStyle = `rgba(160, 235, 200, ${p.alpha})`;
+        ctx.shadowColor = 'rgba(160, 235, 200, 0.8)';
+        ctx.shadowBlur = 8 * devicePixelRatio;
+      } else {
+        ctx.fillStyle = `rgba(200, 210, 220, ${p.alpha * 0.5})`;
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+
+  // Konami-style: press R to "restore" → redirect home
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R') {
+      shield.classList.add('in');
+      setTimeout(() => { window.location.href = '/'; }, 350);
+    }
+  });
+</script>
 </body>
 </html>
