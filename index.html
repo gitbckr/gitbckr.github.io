@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gitbacker — Backups that survive the outage</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='%23000' stroke-width='14' stroke-linejoin='round' stroke-linecap='round'><path d='M42 52 L158 52 L158 114 Q158 158 100 178 Q42 158 42 114 L42 52 Z'/><line x1='100' y1='82' x2='100' y2='138'/><line x1='100' y1='108' x2='128' y2='92'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -1110,7 +1111,7 @@
             <line x1="100" y1="108" x2="128" y2="92"/>
           </svg>
         </span>
-        Gitbacker <span class="ver">v0.9.3</span>
+        Gitbacker <span class="ver" id="ver">v0.9.3</span>
       </a>
       <div class="nav-links">
         <a href="#features">Features</a>
@@ -1131,10 +1132,6 @@
   <section class="hero">
     <div class="wrap hero-inner">
       <div class="hero-top">
-        <div class="badge">
-          <span class="pulse"></span>
-          <span><b>412 repos</b> backed up · last hour</span>
-        </div>
         <h1>Back up every git repo<br>you own, <em>automatically.</em></h1>
         <p class="lede">
           Gitbacker is the self-hosted backup daemon for <b>GitHub, GitLab, Bitbucket</b> and anything that speaks git. Scheduled, <b>GPG-encrypted</b>, deduplicated, restorable with a diff preview. Deploy it in 30 seconds and sleep through the next platform outage.
@@ -1239,10 +1236,6 @@
             </div>
           </div>
 
-          <div class="toast">
-            <span class="d"></span>
-            Run 2,041 finished · <b>409 ok</b>
-          </div>
         </div>
       </div>
     </div>
@@ -1312,19 +1305,12 @@
       <div class="step">
         <div class="step-num">2</div>
         <h3>Add repos</h3>
-        <p>Paste URLs in the UI or POST them to the API. Pick a schedule and a destination, or take the defaults.</p>
-<div class="code"><span class="a">POST</span> /api/repositories
-  <span class="c">"url"</span>: "git@github.com:your-org/api",
-  <span class="c">"schedule"</span>: "0 3 * * *"
-<span class="k">✓ queued · next run 03:00 UTC</span></div>
+        <p>Paste URLs in the UI, pick a schedule and a destination — or take the defaults. Connect a PAT once per host and Gitbacker handles the rest.</p>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <h3>Relax</h3>
-        <p>Scheduler runs. Unchanged repos skip. Failures ping Slack. Restore any snapshot with a full diff preview.</p>
-<div class="code"><span class="k">✓ 412 repos backed up</span>
-<span class="k">✓ 2.1 TB stored encrypted</span>
-<span class="c">▸ next run: tuesday 03:00</span></div>
+        <p>The scheduler keeps running. Unchanged repos skip. Failures ping Slack. Restore any snapshot with a full diff preview before a single ref moves.</p>
       </div>
     </div>
   </div>
@@ -1509,13 +1495,6 @@
   </div>
 </footer>
 
-<div class="switcher">
-  <a href="index.html">← all</a>
-  <a href="v1-brutalist.html">v1 · brutalist</a>
-  <a href="v2-retro.html">v2 · retro</a>
-  <a href="v3-polish.html" class="on">v3 · polish</a>
-</div>
-
 <script>
   // Build a deterministic, realistic heatmap: 53 cols x 7 rows = 371 cells
   (function buildHeatmap() {
@@ -1686,18 +1665,7 @@
   (function heroAnimate() {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // 1) Tick the badge "X repos backed up in the last hour"
-    const badgeNum = document.querySelector('.badge b');
-    if (badgeNum) {
-      let n = 412;
-      const tick = () => {
-        n += 1 + Math.floor(Math.random() * 2);
-        badgeNum.textContent = n.toLocaleString() + ' repos';
-      };
-      if (!reduced) setInterval(tick, 4200);
-    }
-
-    // 2) Animate the dashboard stat values from 0 once visible
+    // 1) Animate the dashboard stat values from 0 once visible
     const dash = document.querySelector('.product');
     if (dash) {
       const animateNum = (el, target, dur = 1400) => {
@@ -1728,43 +1696,7 @@
       io2.observe(dash);
     }
 
-    // 3) Recent-job ticker overlaid in the dashboard header
-    const appHead = document.querySelector('.app-head');
-    if (appHead && !reduced) {
-      const ticker = document.createElement('div');
-      ticker.className = 'job-ticker';
-      ticker.innerHTML = '<span class="dot"></span><span class="text">your-org/api · 3.2 GB encrypted</span>';
-      appHead.appendChild(ticker);
-      const jobs = [
-        ['your-org/api', '3.2 GB encrypted'],
-        ['your-org/web', '812 MB encrypted'],
-        ['your-org/infra', '248 MB · no change'],
-        ['your-org/ml-pipeline', '14.4 GB encrypted'],
-        ['your-org/docs', '92 MB encrypted'],
-        ['your-org/archive-2013', 'auth error · paged ops'],
-        ['your-org/payments', '1.8 GB encrypted'],
-        ['your-org/mobile', '624 MB encrypted'],
-      ];
-      let ji = 0;
-      const text = ticker.querySelector('.text');
-      const dot = ticker.querySelector('.dot');
-      setInterval(() => {
-        ji = (ji + 1) % jobs.length;
-        const [repo, status] = jobs[ji];
-        const isErr = status.includes('error');
-        const isSkip = status.includes('no change');
-        text.style.transform = 'translateY(-6px)';
-        text.style.opacity = '0';
-        setTimeout(() => {
-          text.innerHTML = `<b>${repo}</b> · ${status}`;
-          dot.dataset.kind = isErr ? 'err' : isSkip ? 'skip' : 'ok';
-          text.style.transform = 'translateY(0)';
-          text.style.opacity = '1';
-        }, 220);
-      }, 2400);
-    }
-
-    // 4) Heatmap: light up the latest column over time
+    // 3) Heatmap: light up the latest column over time
     const hm = document.getElementById('hm');
     if (hm && !reduced) {
       // Wait until heatmap is built
@@ -1789,6 +1721,18 @@
         setInterval(tick, 1800);
       }, 200);
     }
+  })();
+
+  (function fetchVersion() {
+    const el = document.getElementById('ver');
+    if (!el) return;
+    fetch('https://raw.githubusercontent.com/gitbckr/gitbacker/main/VERSION', { cache: 'no-cache' })
+      .then(r => r.ok ? r.text() : Promise.reject(r.status))
+      .then(t => {
+        const v = t.trim();
+        if (/^\d+(\.\d+){1,3}([-+].+)?$/.test(v)) el.textContent = 'v' + v;
+      })
+      .catch(() => {});
   })();
 </script>
 </body>
