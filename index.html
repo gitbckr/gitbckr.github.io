@@ -888,7 +888,13 @@
     padding: 3px 7px;
     background: color-mix(in oklch, var(--accent) 10%, transparent);
     border-radius: 6px;
+    white-space: nowrap;
   }
+  .why-fix.soon .fix-tag {
+    color: var(--warn);
+    background: color-mix(in oklch, var(--warn) 10%, transparent);
+  }
+  .why-fix.soon > span:last-child { opacity: 0.72; }
   .why-fix code {
     color: var(--fg);
     font-family: inherit;
@@ -1409,12 +1415,13 @@
     "sevLabel": "Medium",
     "title": "A laptop <em>walks off</em>.",
     "lede": "Stolen at a conference, dropped in a river, encrypted by ransomware over a long weekend. Your only local clone of that uncommitted prototype <b>goes with it</b>.",
-    "fixTag": "Mitigation",
+    "soon": true,
+    "fixTag": "Coming soon",
     "fix": "<b>Settings → General → Mirror stashes</b> — server-side copy of every clone.",
     "stats": [
       {"k":"US laptops lost /yr","v":"~70k"},
       {"k":"Avg. data on dev box","v":"~120GB"},
-      {"k":"Server-side mirror","v":"<em>always on</em>"}
+      {"k":"Server-side mirror","v":"<em>planned</em>"}
     ]
   },
   {
@@ -1424,11 +1431,12 @@
     "sevLabel": "High",
     "title": "The host <em>goes dark</em>.",
     "lede": "GitHub had multi-hour outages last quarter. GitLab.com's <b>2017 incident</b> lost six hours of data. Bitbucket sunset Mercurial with twelve months notice — not everyone made the cut. You don't get to schedule the migration.",
-    "fixTag": "Mitigation",
+    "soon": true,
+    "fixTag": "Coming soon",
     "fix": "<b>Destinations → Serve read-only</b> — a local clone URL while upstream's down.",
     "stats": [
       {"k":"Major host incidents/yr","v":"10+"},
-      {"k":"Local read-only mode","v":"<em>built-in</em>"},
+      {"k":"Local read-only mode","v":"<em>planned</em>"},
       {"k":"Time to fail over","v":"~30s"}
     ]
   },
@@ -1439,7 +1447,8 @@
     "sevLabel": "Medium",
     "title": "The acquirer wants <em>everything</em>.",
     "lede": "Every repo, every branch, every secret-scan, in one offline tarball with a manifest, by Friday. <b>&ldquo;It's all on GitHub&rdquo; isn't an answer</b> the diligence team accepts.",
-    "fixTag": "Mitigation",
+    "soon": true,
+    "fixTag": "Coming soon",
     "fix": "<b>Repos → Export all → Signed manifest</b> — single tarball, decrypted on demand.",
     "stats": [
       {"k":"Repos in one archive","v":"<em>unlimited</em>"},
@@ -1454,7 +1463,8 @@
     "sevLabel": "High",
     "title": "The auditor <em>asks the question</em>.",
     "lede": "<b>SOC 2 CC7.5</b>, <b>ISO 27001 A.8.13</b>, <b>NIS2 Article 21</b>: where is your source code backed up, and who controls the keys? A third-party SaaS holding both is the wrong answer.",
-    "fixTag": "Mitigation",
+    "soon": true,
+    "fixTag": "Coming soon",
     "fix": "<b>Settings → Audit log → Last 30 days</b> — signed record of every backup, every key.",
     "stats": [
       {"k":"Keys held by","v":"<em>you</em>"},
@@ -1590,7 +1600,7 @@
         <div class="why-fade" style="animation-delay: 40ms;">
           <h3>${d.title}</h3>
           <p class="lede2" style="margin-top: 16px;">${d.lede}</p>
-          <div class="why-fix" style="margin-top: 18px;">
+          <div class="why-fix${d.soon ? ' soon' : ''}" style="margin-top: 18px;">
             <span class="fix-tag">${d.fixTag}</span>
             <span>${d.fix}</span>
           </div>
